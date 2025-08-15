@@ -1,0 +1,45 @@
+from database_interaction import *
+from pathlib import Path
+
+conn = create_connection("../data/sabdab_summary_all.sqlite")
+sabdab_df = get_dataframe(conn, "main")
+skempi_df = get_dataframe(conn, "skempi")
+
+file_priority_list = ["imgt", "chothia", "raw", "SKEMPI", "abdb"]
+
+def get_highest_priority_path(list_of_paths, priority_list):
+    priority_map = {keyword: i for i, keyword in enumerate(priority_list)}
+
+    def get_file_priority(file_path: Path):
+        for keyword, priority in priority_map.items():
+            if keyword in file_path.name.lower():
+                return priority
+        return len(priority_list)
+
+    # Sort the list of paths using the custom key
+    sorted_paths = sorted(list_of_paths, key=get_file_priority)
+
+    # Return the first element, which is the highest-priority path
+    return sorted_paths[0] if sorted_paths else None
+
+def search_antibodies(antigen: str, filter_structures: bool=True):
+    sabdab_selection = sabdab_df.loc[sabdab_df["antigen_name"].str.contains(antigen, case=False) |
+                                     sabdab_df["compound"].str.contains(antigen, case=False)].sort_values("affinity")
+    skempi_selection = {}
+    pdb_files = {}
+
+    for _, row in sabdab_selection.iterrows():
+        pdb = row["pdb"]
+
+        # retrieve skempi data
+        sel = skempi_df.loc[skempi_df["Pdb"].str.contains(pdb, case=False)]
+        skempi_selection[pdb] = sel if len(sel) > 0 else None
+
+        # retrieve pdb files
+        pdb_files[pdb] = get_pdbs(pdb, "../files/")
+
+    if filter_structures:
+        for key in pdb_files:
+            pdb_files[key] = get_highest_priority_path(pdb_files[key], file_priority_list)
+
+    return sabdab_selection, skempi_selection, pdb_files
