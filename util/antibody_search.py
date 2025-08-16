@@ -1,7 +1,8 @@
-from database_interaction import *
+from util import DATA_DIR, FILES_DIR
+from util.database_interaction import *
 from pathlib import Path
 
-conn = create_connection("../data/sabdab_summary_all.sqlite")
+conn = create_connection(str(DATA_DIR / "sabdab_summary_all.sqlite"))
 sabdab_df = get_dataframe(conn, "main")
 skempi_df = get_dataframe(conn, "skempi")
 
@@ -36,7 +37,7 @@ def search_antibodies(antigen: str, filter_structures: bool=True):
         skempi_selection[pdb] = sel if len(sel) > 0 else None
 
         # retrieve pdb files
-        pdb_files[pdb] = get_pdbs(pdb, "../files/")
+        pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR))
 
     if filter_structures:
         for key in pdb_files:
