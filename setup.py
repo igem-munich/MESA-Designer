@@ -18,7 +18,8 @@ def download_file(url: str, file_path: str) -> bool:
 
         return True
 
-    except Exception:
+    except Exception as e:
+        print(e)
         return False
 
 if  __name__ == "__main__":
