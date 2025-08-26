@@ -6,7 +6,7 @@ from util.database_interaction import create_database, read_csv, create_table_fr
 
 def download_file(url: str, file_path: str) -> bool:
     try:
-        Path.mkdir(Path(file_path), parents=True, exist_ok=True)
+        Path.mkdir(Path(file_path).parent, parents=True, exist_ok=True)
 
         res = req.get(url, stream=True)
         res.raise_for_status()
@@ -33,6 +33,8 @@ if  __name__ == "__main__":
     #    RequiredFile("sabdab_structures", "./sabdab_structures", FileType.DIRECTORY),
     #    RequiredFile("skempi2_pdbs", "./SKEMPI2_PDBS", FileType.DIRECTORY)
     #]
+    Path.mkdir(Path("./data"))
+    Path.mkdir(Path("./files"))
 
     # sabdab_sqlite
     print("Downloading sabdab database and creating sqlite database...")
