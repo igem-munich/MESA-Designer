@@ -1,6 +1,7 @@
 import sqlite3
 import requests as req
 from tqdm import tqdm
+from pathlib import Path
 from util.database_interaction import create_database, read_csv, create_table_from_header, insert_data
 
 def download_file(url: str, file_path: str) -> bool:
@@ -39,6 +40,7 @@ if  __name__ == "__main__":
         exit(1)
 
     print("Creating sqlite3 database...")
+    Path.mkdir(Path("./data"), parents=True, exist_ok=True)
     conn: sqlite3.Connection = create_database("./data/sabdab_summary_all.sqlite")
     header, data = read_csv("./files/sabdab_summary_all.tsv")
     create_table_from_header(conn, header, "main")
