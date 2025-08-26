@@ -64,6 +64,46 @@ insert_data(conn, data, "main")
 conn.close()
 print("Successfully created sabdab sqlite3 database")
 
+# download pdb files from skempi database
+print("Downloading SKEMPI structures...")
+if not download_file("https://life.bsc.es/pid/skempi2/database/download/SKEMPI2_PDBs.tgz", "./files/skempi_pdbs.tgz"):
+    print("Failed to download skempi structures! Exiting!")
+    exit(1)
+
+# extract tar archive and move files to correct directory
+print("Extracting archive...")
+with tarfile.open("./files/skempi_pdbs.tgz", "r") as f:
+    Path.mkdir(Path("./files/skempi_structures_tmp"), exist_ok=True)
+    f.extractall("./files/skempi_structures_tmp")
+
+# move pdb files to correct location
+Path.mkdir(Path("./files/skempi_structures"), exist_ok=True)
+skempi_dir: Path = Path("./files/skempi_structures_tmp/PDBs")
+shutil.move(skempi_dir, skempi_dir.parent.parent)
+shutil.rmtree(abdb_dir.parent)
+os.rename(Path("./files/PDBs"), Path("./files/skempi_structures"))
+
+# rename pdb files to be in line with sabdab naming (entire database)
+for path in Path("./files/skempi_structures").glob("*"):
+    new_path = path.with_name(path.name.lower())
+    os.rename(path, new_path)
+
+print("Successfully downloaded skempi pdb files!")
+
+# download skempi protein-protein affinity data and insert it into sqlite database
+print("Downloading skempi affinity data...")
+if not download_file("https://life.bsc.es/pid/skempi2/database/download/skempi_v2.csv", "./files/skempi_v2.csv"):
+    print("Failed to download skempi v2 affinity data! Exiting!")
+    exit(1)
+
+# create a new table and insert the data
+print("Adding data to sqlite database...")
+skempi_header, skempi_data = read_csv("./files/skempi_v2.csv", ";")
+conn = create_connection("./data/sabdab_summary_all.sqlite")
+create_table_from_header(conn, skempi_header, "skempi")
+insert_data(conn, skempi_data, "skempi")
+print("Successfully inserted skempi data into database!")
+
 # download the pdb files from abYbank's antibody database
 print("Downloading abYbank Antibody DB (abdb)...")
 if not download_file("http://www.abybank.org/abdb/snapshots/abdb_20240706.zip", "./files/abdb_pdbs.zip"):
@@ -96,46 +136,6 @@ for path in Path("./files/abdb_structures/chothia").glob("*.cho"):
     os.rename(path, new_path)
 
 print("Successfully downloaded abdb pdb files!")
-
-# download pdb files from skempi database
-print("Downloading SKEMPI structures...")
-if not download_file("https://life.bsc.es/pid/skempi2/database/download/SKEMPI2_PDBs.tgz", "./files/skempi_pdbs.tgz"):
-    print("Failed to download skempi structures! Exiting!")
-    exit(1)
-
-# extract tar archive and move files to correct directory
-print("Extracting archive...")
-with tarfile.open("./files/skempi_pdbs.tgz", "r") as f:
-    Path.mkdir(Path("./files/skempi_structures_tmp"), exist_ok=True)
-    f.extractall("./files/skempi_structures_tmp")
-
-# move pdb files to correct location
-Path.mkdir(Path("./files/skempi_structures"), exist_ok=True)
-skempi_dir: Path = Path("./files/skempi_structures_tmp/pdbs")
-shutil.move(skempi_dir, skempi_dir.parent.parent)
-shutil.rmtree(abdb_dir.parent)
-os.rename(Path("./files/pdbs"), Path("./files/skempi_structures"))
-
-# rename pdb files to be in line with sabdab naming (entire database)
-for path in Path("./files/skempi_structures").glob("*"):
-    new_path = path.with_name(path.name.lower())
-    os.rename(path, new_path)
-
-print("Successfully downloaded skempi pdb files!")
-
-# download skempi protein-protein affinity data and insert it into sqlite database
-print("Downloading skempi affinity data...")
-if not download_file("https://life.bsc.es/pid/skempi2/database/download/skempi_v2.csv", "./files/skempi_v2.csv"):
-    print("Failed to download skempi v2 affinity data! Exiting!")
-    exit(1)
-
-# create a new table and insert the data
-print("Adding data to sqlite database...")
-skempi_header, skempi_data = read_csv("./files/skempi_v2.csv", ";")
-conn = create_connection("./data/sabdab_summary_all.sqlite")
-create_table_from_header(conn, skempi_header, "skempi")
-insert_data(conn, skempi_data, "skempi")
-print("Successfully inserted skempi data into database!")
 
 # download sabdab pdb files and extract to correct location
 print("Downloading sabdab pdb files...")
