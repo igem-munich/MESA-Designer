@@ -46,9 +46,8 @@ if  __name__ == "__main__":
     print("Creating sqlite3 database...")
     Path.mkdir(Path("./data"), parents=True, exist_ok=True)
     conn: sqlite3.Connection = create_database("./data/sabdab_summary_all.sqlite")
-    header, data = read_csv("./files/sabdab_summary_all.tsv")
+    header, data = read_csv("./files/sabdab_summary_all.tsv", delimiter="\t")
     create_table_from_header(conn, header, "main")
-    conn.close()
-    conn = create_connection("./data/sabdab_summary_all.sqlite")
     insert_data(conn, header, "main")
+    conn.close()
 
