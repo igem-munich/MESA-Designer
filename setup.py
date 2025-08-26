@@ -2,7 +2,7 @@ import sqlite3
 import requests as req
 from tqdm import tqdm
 from pathlib import Path
-from util.database_interaction import create_database, read_csv, create_table_from_header, insert_data
+from util.database_interaction import create_database, read_csv, create_table_from_header, insert_data, create_connection
 import zipfile
 
 def download_file(url: str, file_path: str) -> bool:
@@ -59,4 +59,39 @@ if  __name__ == "__main__":
 
     with zipfile.ZipFile("./files/sabdab_structures.zip", "r") as f:
         Path.mkdir(Path("./files/sabdab_structures"), exist_ok=True)
-        f.extractall("./files/sabdab_structures")
+        f.extractall("./files/")
+    print("Successfully downloaded sabdab pdb files!")
+
+    print("Downloading abYbank Antibody DB (abdb)...")
+    if not download_file("http://www.abybank.org/abdb/Data/LH_Combined_Kabat.tar.bz2", "./files/abdb_pdbs.tar.bz2"):
+        print("Failed to download abdb structures! Exiting!")
+        exit(1)
+
+    with zipfile.ZipFile("./files/abdb_pdbs.tar.bz2", "r") as f:
+        Path.mkdir(Path("./files/abdb_structures"), exist_ok=True)
+        f.extractall("./files/abdb_structures")
+
+    # TODO: rename pdbs according to renaming_to_pure_pdb.ipynb
+    print("Successfully downloaded abdb pdb files!")
+
+    print("Downloading SKEMPI structures...")
+    if not download_file("https://life.bsc.es/pid/skempi2/database/download/SKEMPI2_PDBs.tgz", "./files/skempi_pdbs.tgz"):
+        Path.mkdir(Path("./files/skempi_structures"), exist_ok=True)
+        f.extractall("./files/skempi_structures")
+
+    # TODO: rename pdbs according to renaming_to_pure_pdb.ipynb
+    print("Successfully downloaded skempi pdb files!")
+
+    # TODO: (optional) clean-up and tracking of installed files
+
+    print("Downloading skempi affinity data...")
+    if not download_file("https://life.bsc.es/pid/skempi2/database/download/skempi_v2.csv", "./files/skempi_v2.csv"):
+        print("Failed to download skempi v2 affinity data! Exiting!")
+        exit(1)
+
+    print("Adding data to sqlite database...")
+    skempi_header, skempi_data = read_csv("./files/skempi_v2.csv", ";")
+    conn = create_connection("./data/sabdab_summary_all.sqlite")
+    create_table_from_header(conn, skempi_header, "skempi")
+    insert_data(conn, skempi_data, "skempi")
+    print("Successfully inserted skempi data into database!")
