@@ -3,6 +3,7 @@ import requests as req
 from tqdm import tqdm
 from pathlib import Path
 from util.database_interaction import create_database, read_csv, create_table_from_header, insert_data
+import zipfile
 
 def download_file(url: str, file_path: str) -> bool:
     try:
@@ -28,7 +29,6 @@ def download_file(url: str, file_path: str) -> bool:
 if  __name__ == "__main__":
     # constants
     #required_files: list[RequiredFile] = [
-    #    RequiredFile("sabdab_sqlite", "./data/sabdab_summary_all.sqlite", FileType.DATABASE),
     #    RequiredFile("abdb_pdbs", "./abdb_pdbs", FileType.DIRECTORY),
     #    RequiredFile("sabdab_structures", "./sabdab_structures", FileType.DIRECTORY),
     #    RequiredFile("skempi2_pdbs", "./SKEMPI2_PDBS", FileType.DIRECTORY)
@@ -50,4 +50,13 @@ if  __name__ == "__main__":
     create_table_from_header(conn, header, "main")
     insert_data(conn, data, "main")
     conn.close()
+    print("Successfully created sabdab sqlite3 database")
 
+    print("Downloading sabdab pdb files...")
+    if not download_file("https://opig.stats.ox.ac.uk/webapps/sabdab-sabpred/sabdab/archive/all/", "./files/sabdab_structures.zip"):
+        print("Failed to download sabdab structures! Exiting!")
+        exit(1)
+
+    with zipfile.ZipFile("./files/sabdab_structures.zip", "r") as f:
+        Path.mkdir(Path("./files/sabdab_structures"), exist_ok=True)
+        f.extractall("./files/sabdab_structures")
