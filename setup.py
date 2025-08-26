@@ -6,6 +6,7 @@ from util.database_interaction import create_database, read_csv, create_table_fr
 import zipfile
 import tarfile
 import os
+import shutil
 
 # Defines a function to download a file from a given URL to a specified file path
 def download_file(url: str, file_path: str) -> bool:
@@ -72,8 +73,17 @@ if not download_file("http://www.abybank.org/abdb/snapshots/abdb_20240706.zip", 
 # extract the tar archive and move files to the correct directory
 print("Extracting archive...")
 with zipfile.ZipFile("./files/abdb_pdbs.zip", "r") as f:
-    Path.mkdir(Path("./files/abdb_structures"), exist_ok=True)
-    f.extractall("./files/abdb_structures")
+    Path.mkdir(Path("./files/abdb_structures_tmp"), exist_ok=True)
+    f.extractall("./files/abdb_structures_tmp")
+
+# move content of downloaded snapshot to parent directory
+# get folder containing the files
+# needs to be updated when abdb is done rebuilding their database
+Path.mkdir(Path("./files/abdb_structures"), exist_ok=True)
+abdb_dir: Path = Path("./files/abdb_structures_tmp/abdb_newdata_20240706")
+shutil.move(abdb_dir, abdb_dir.parent.parent)
+shutil.rmtree(abdb_dir.parent)
+os.rename(Path("./files/abdb_newdata_20240706"), Path("./files/abdb_structures"))
 
 # rename pdb files to be in line with sabdab naming (only chothia numbering)
 for path in Path("./files/abdb_structures/chothia").glob("*.cho"):
@@ -91,8 +101,15 @@ if not download_file("https://life.bsc.es/pid/skempi2/database/download/SKEMPI2_
 # extract tar archive and move files to correct directory
 print("Extracting archive...")
 with tarfile.open("./files/skempi_pdbs.tgz", "r") as f:
-    Path.mkdir(Path("./files/skempi_structures"), exist_ok=True)
-    f.extractall("./files/skempi_structures")
+    Path.mkdir(Path("./files/skempi_structures_tmp"), exist_ok=True)
+    f.extractall("./files/skempi_structures_tmp")
+
+# move pdb files to correct location
+Path.mkdir(Path("./files/skempi_structures"), exist_ok=True)
+skempi_dir: Path = Path("./files/skempi_structures_tmp/pdbs")
+shutil.move(skempi_dir, skempi_dir.parent.parent)
+shutil.rmtree(abdb_dir.parent)
+os.rename(Path("./files/pdbs"), Path("./files/skempi_structures"))
 
 # rename pdb files to be in line with sabdab naming (entire database)
 for path in Path("./files/skempi_structures").glob("*"):
@@ -124,8 +141,14 @@ if not download_file("https://opig.stats.ox.ac.uk/webapps/sabdab-sabpred/sabdab/
 # extract zip archive and move to correct location
 print("Extracting archive...")
 with zipfile.ZipFile("./files/sabdab_structures.zip", "r") as f:
-    Path.mkdir(Path("./files/sabdab_structures"), exist_ok=True)
-    f.extractall("./files/")
+    Path.mkdir(Path("./files/sabdab_structures_tmp"), exist_ok=True)
+    f.extractall("./files/sabdab_structures_tmp")
+
+Path.mkdir(Path("./files/sabdab_structures"), exist_ok=True)
+sabdab_dir: Path = Path("./files/sabdab_structures_tmp/all_structures")
+shutil.move(sabdab_dir, sabdab_dir.parent.parent)
+shutil.rmtree(sabdab_dir.parent)
+os.rename(Path("./files/all_structures"), Path("./files/sabdab_structures"))
 
 print("Successfully downloaded sabdab pdb files!")
 
