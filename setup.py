@@ -10,7 +10,7 @@ def download_file(url: str, file_path: str) -> bool:
 
         size = int(res.headers.get("content-length", 0))
 
-        with tqdm(total=size, units="B", unit_scale=True, unit_divisor=1024, desc=file_path.split("/")[-1]) as progress:
+        with tqdm(total=size, unit="B", unit_scale=True, unit_divisor=1024, desc=file_path.split("/")[-1]) as progress:
             with open(file_path, "wb") as f:
                 for chunk in res.iter_content(chunk_size=8192):
                     f.write(chunk)
