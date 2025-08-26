@@ -80,7 +80,7 @@ with tarfile.open("./files/skempi_pdbs.tgz", "r") as f:
 Path.mkdir(Path("./files/skempi_structures"), exist_ok=True)
 skempi_dir: Path = Path("./files/skempi_structures_tmp/PDBs")
 shutil.move(skempi_dir, skempi_dir.parent.parent)
-shutil.rmtree(abdb_dir.parent)
+shutil.rmtree(skempi_dir.parent)
 os.rename(Path("./files/PDBs"), Path("./files/skempi_structures"))
 
 # rename pdb files to be in line with sabdab naming (entire database)
