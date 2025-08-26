@@ -157,4 +157,6 @@ os.rename(Path("./files/all_structures"), Path("./files/sabdab_structures"))
 
 print("Successfully downloaded sabdab pdb files!")
 
+print("Successfully setup databases!")
+
 # TODO: (optional) clean-up and tracking of installed files
