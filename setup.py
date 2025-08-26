@@ -65,12 +65,13 @@ print("Successfully created sabdab sqlite3 database")
 
 # download the pdb files from abYbank's antibody database
 print("Downloading abYbank Antibody DB (abdb)...")
-if not download_file("http://www.abybank.org/abdb/Data/LH_Combined_Kabat.tar.bz2", "./files/abdb_pdbs.tar.bz2"):
+if not download_file("http://www.abybank.org/abdb/snapshots/abdb_20240706.zip", "./files/abdb_pdbs.zip"):
     print("Failed to download abdb structures! Exiting!")
     exit(1)
 
 # extract the tar archive and move files to the correct directory
-with tarfile.open("./files/abdb_pdbs.tar.bz2", "r") as f:
+print("Extracting archive...")
+with zipfile.ZipFile("./files/abdb_pdbs.zip", "r") as f:
     Path.mkdir(Path("./files/abdb_structures"), exist_ok=True)
     f.extractall("./files/abdb_structures")
 
@@ -88,6 +89,7 @@ if not download_file("https://life.bsc.es/pid/skempi2/database/download/SKEMPI2_
     exit(1)
 
 # extract tar archive and move files to correct directory
+print("Extracting archive...")
 with tarfile.open("./files/skempi_pdbs.tgz", "r") as f:
     Path.mkdir(Path("./files/skempi_structures"), exist_ok=True)
     f.extractall("./files/skempi_structures")
@@ -119,6 +121,8 @@ if not download_file("https://opig.stats.ox.ac.uk/webapps/sabdab-sabpred/sabdab/
     print("Failed to download sabdab structures! Exiting!")
     exit(1)
 
+# extract zip archive and move to correct location
+print("Extracting archive...")
 with zipfile.ZipFile("./files/sabdab_structures.zip", "r") as f:
     Path.mkdir(Path("./files/sabdab_structures"), exist_ok=True)
     f.extractall("./files/")
