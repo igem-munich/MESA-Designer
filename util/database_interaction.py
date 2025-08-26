@@ -5,8 +5,8 @@ import pathlib
 import csv
 
 # create new sqlite database
-def create_databse(filepath: str) -> sqlite3.Connection:
-    return sqlite3.Connection(filepath)
+def create_database(filepath: str) -> sqlite3.Connection:
+    return sqlite3.connect(filepath)
 
 # create new table and populate with data
 def read_csv(filepath: str, delimiter: str=","):
