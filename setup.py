@@ -6,7 +6,7 @@ from util.database_interaction import create_database, read_csv, create_table_fr
 
 def download_file(url: str, file_path: str) -> bool:
     try:
-        Path.mkdir(Path(url), parents=True, exist_ok=True)
+        Path.mkdir(Path(file_path), parents=True, exist_ok=True)
 
         res = req.get(url, stream=True)
         res.raise_for_status()
