@@ -1,11 +1,3 @@
-import sys
-from pathlib import Path
-
-# Ensure project root is on sys.path so `util` is importable when run via `streamlit run`
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
 import streamlit as st
 import streamlit_molstar as molstar
 from util.antibody_search import search_antibodies
