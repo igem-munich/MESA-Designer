@@ -85,6 +85,11 @@ shutil.move(abdb_dir, abdb_dir.parent.parent)
 shutil.rmtree(abdb_dir.parent)
 os.rename(Path("./files/abdb_newdata_20240706"), Path("./files/abdb_structures"))
 
+# move chothia files to separate directory
+Path.mkdir(Path("./files/abdb_structures/chothia"))
+for path in Path("./files/abdb_structures").glob("*.cho"):
+    shutil.move(path, path.parent / "chothia")
+
 # rename pdb files to be in line with sabdab naming (only chothia numbering)
 for path in Path("./files/abdb_structures/chothia").glob("*.cho"):
     new_path = path.with_name(path.name[3:-3] + "pdb")
