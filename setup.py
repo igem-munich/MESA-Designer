@@ -2,7 +2,7 @@ import sqlite3
 import requests as req
 from tqdm import tqdm
 from pathlib import Path
-from util.database_interaction import create_database, read_csv, create_table_from_header, insert_data
+from util.database_interaction import create_database, read_csv, create_table_from_header, insert_data, create_connection
 
 def download_file(url: str, file_path: str) -> bool:
     try:
@@ -48,5 +48,7 @@ if  __name__ == "__main__":
     conn: sqlite3.Connection = create_database("./data/sabdab_summary_all.sqlite")
     header, data = read_csv("./files/sabdab_summary_all.tsv")
     create_table_from_header(conn, header, "main")
+    conn.close()
+    conn = create_connection("./data/sabdab_summary_all.sqlite")
     insert_data(conn, header, "main")
 
