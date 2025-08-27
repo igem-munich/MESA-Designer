@@ -23,7 +23,7 @@ if "pdbs" not in st.session_state:
 if "tmd" not in st.session_state:
     st.session_state.tmd = None
 if "linkers" not in st.session_state:
-    st.session_state.linkers = {"linker1": None, "linker2": None}
+    st.session_state.linkers = {"linker1": " ", "linker2": " "}
 if "pdb_fasta" not in st.session_state:
     st.session_state.pdb_fasta = None
 
@@ -104,7 +104,7 @@ if st.session_state.pdbs:
             )
 
             if linker1_pattern_generate:
-                st.session_state.linkers["linker1"] = linker1_input * linker1_repeats
+                st.session_state.linkers["linker1"] = st.session_state.linker1_pattern * st.session_state.linker1_repeats
 
     def update_linker1():
         st.session_state.linkers["linker1"] = st.session_state.linker1_sequence
@@ -224,5 +224,3 @@ if st.session_state.pdbs:
 #        with open(st.session_state.pdbs[pdb_selection], "rb") as f:
 #            st.session_state.pdb_fasta = extract_fasta_from_pdb(st.session_state.pdbs[pdb_selection])
 #            st.download_button(label="⬇️", data=f, file_name=f"{pdb_selection}.pdb")
-
-print(st.session_state.linkers)
