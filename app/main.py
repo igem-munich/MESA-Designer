@@ -1,3 +1,11 @@
+from pathlib import Path
+import sys
+# add main directory to system path for imports
+current_dir = Path(__file__).resolve().parent
+project_root = current_dir.parent
+sys.path.insert(0, str(project_root))
+
+# regular code
 import streamlit as st
 import streamlit_molstar as molstar
 from util.antibody_search import search_antibodies
@@ -48,3 +56,8 @@ if st.session_state.pdbs:
 
     with col4:
         molstar.st_molstar(st.session_state.pdbs[pdb_selection], height=500)
+
+
+# TODO: create composition and length selection for linker
+# TODO: TMD picker
+# TODO: intracellular

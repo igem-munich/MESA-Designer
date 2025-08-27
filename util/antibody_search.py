@@ -6,7 +6,7 @@ conn = create_connection(str(DATA_DIR / "sabdab_summary_all.sqlite"))
 sabdab_df = get_dataframe(conn, "main")
 skempi_df = get_dataframe(conn, "skempi")
 
-file_priority_list = ["imgt", "chothia", "raw", "SKEMPI", "abdb"]
+file_priority_list = ["imgt", "chothia", "raw", "skempi", "abdb"]
 
 def get_highest_priority_path(list_of_paths, priority_list):
     priority_map = {keyword: i for i, keyword in enumerate(priority_list)}
@@ -33,7 +33,7 @@ def search_antibodies(antigen: str, filter_structures: bool=True):
         pdb = row["pdb"]
 
         # retrieve skempi data
-        sel = skempi_df.loc[skempi_df["Pdb"].str.contains(pdb, case=False)]
+        sel = skempi_df.loc[skempi_df["#Pdb"].str.contains(pdb, case=False)]
         skempi_selection[pdb] = sel if len(sel) > 0 else None
 
         # retrieve pdb files
