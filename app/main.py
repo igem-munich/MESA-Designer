@@ -10,7 +10,7 @@ import streamlit as st
 from stmol import *
 import py3Dmol
 from util.antibody_search import search_antibodies
-from util import TMD_DATA
+from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA
 from util.pdb_interaction import extract_chains_from_pdb
 from util.general import new_random_color
 import zipfile
@@ -62,6 +62,9 @@ def update_chain_highlight_selection_residues(chain_id_to_change, current_pdb_se
         select_from, select_to = state[input_key].split(":")
         state.highlight_selection[chain_id_to_change] = list(range(int(select_from), int(select_to) + 1))
 
+def update_split_protease_value():
+    state.split_protease_toggle_value = not state.split_protease_toggle_value
+
 # streamlit config
 st.title("MESA-Design Tool")
 st.set_page_config(layout="wide")
@@ -75,7 +78,7 @@ with col1:
     search_field = st.text_input(label="Antigen-Search", key="search_input", label_visibility="collapsed", placeholder="Search target antigen")
 
 with col2:
-    search_button = st.button("🔎", key="search_button")
+    search_button = st.button("", key="search_button", icon=":material/search:", width=45)
 
 # search database and display options
 if search_button:
@@ -86,7 +89,10 @@ if search_button:
         st.error("Please enter a search query.")
 
 if state.sabdab is not None:
-    st.dataframe(state.sabdab)
+    if len(state.sabdab) > 0:
+        st.dataframe(state.sabdab)
+    else:
+        st.info("No targets were found")
 
 ### Display Found Binder Structures ####################################################################################
 # create new columns for displaying pdb structure
@@ -94,8 +100,9 @@ if state.pdbs:
     st.header("Inspect Structures")
     col3, col4 = st.columns([0.2, 1])
 
-    # display radio selection
+    # display radio selection and chain/residue selection
     with col3:
+
         st.subheader("Select Binder")
         pdb_selection = st.radio(
             label="PDB Selection",
@@ -194,16 +201,21 @@ if state.pdbs:
         # remove last space
         fasta = fasta[:-1]
 
+        # show fasta
+        st.subheader("FASTA Preview")
         fasta_preview = st.code(
             body=fasta,
             height="content",
-            language="text"
+            language="text",
+            wrap_lines=True
         )
 
         state.binder_fasta = fasta
 
+### Build linker between Binder and TMD ################################################################################
 # TODO OPTIONAL: more options for linker building
 if state.pdbs:
+    st.divider()
     st.header("Linker design")
 
     multi_linker = st.toggle(
@@ -292,8 +304,10 @@ if state.pdbs:
             max_chars=1000
         )
 
-# TMD picker
+### TMD picker #########################################################################################################
+# TODO: let user enter custom TMDs
 if state.pdbs:
+    st.divider()
     st.header("TMD Picker")
 
     multi_tmd = st.toggle(
@@ -316,7 +330,7 @@ if state.pdbs:
                 index=0
             )
 
-            st.code(TMD_DATA[selected_tmd_left][1], language="text")
+            st.code(TMD_DATA[selected_tmd_left][1], language="text", wrap_lines=True)
 
         with col_tmd_right:
             st.subheader("TMD 2")
@@ -328,7 +342,7 @@ if state.pdbs:
                 index=4
             )
 
-            st.code(TMD_DATA[selected_tmd_right][1], language="text")
+            st.code(TMD_DATA[selected_tmd_right][1], language="text", wrap_lines=True)
 
         state.tmd = {"left": TMD_DATA[selected_tmd_left], "right": TMD_DATA[selected_tmd_right]}
 
@@ -346,15 +360,264 @@ if state.pdbs:
             )
 
         with col_tmd_sequence:
-            st.code(TMD_DATA[selected_tmd][1], language="text")
+            st.code(TMD_DATA[selected_tmd][1], language="text", wrap_lines=True)
 
         state.tmd = {"both": TMD_DATA[selected_tmd]}
 
 # TODO OPTIONAL: view the different TMDs and view their combinations
-# TODO: intracellular
+# TODO: intracellular: receptor test: FRET
+### INTRACELLULAR PART DESIGNER ########################################################################################
+if state.pdbs:
+    st.divider()
+    st.header("Intracellular Component")
+
+    # choose between custom and tev protease ICD
+    custom_icd = st.toggle(
+        label="Custom ICD",
+        value=False,
+        key="custom_icd_toggle",
+        help="You can design your own custom ICD if you want or continue building with the TEV-Protease. Note: If you would like to use the general MESA ICD framework, but use a different protein / recognition sequence you can still continue to use this tool."
+    )
+
+    # custom icd design
+    if not custom_icd:
+        st.subheader("Enter ICD Sequence")
+        custom_icd_sequence = st.text_area(
+            label="Custom ICD",
+            value="",
+            height="content",
+            label_visibility="collapsed"
+        )
+
+    # TEV-Protease ICD Design
+    else:
+        st.subheader("Protease Design")
+        protease_design_container = st.container(border=True)
+
+        with protease_design_container:
+
+            # split protease design or separate chain design
+            # add toggle value to state to change label
+            if "split_protease_toggle_value" not in state:
+                state.split_protease_toggle_value = True
+
+            # pick between split protease or separate sequences
+            split_protease = st.toggle(
+                label=("Split Protease" if state.split_protease_toggle_value else "Separate Chains"),
+                value=state.split_protease_toggle_value,
+                key="split_protease_toggle",
+                help="Split protease: The TEV-Protease or custom protein is split into two chains. Separate Chains: The TEV-Protease is fully assembled on one chain and the protein recognition sequence and target are on the other chain",
+                on_change=update_split_protease_value
+            )
+
+            # let user pick between prebuilt TEV-protease construct or custom
+            custom_protease = st.toggle(
+                label="Custom Protease",
+                value=False,
+                key="custom_protease_toggle",
+                help="Enter your own protease or use TEV-Protease"
+            )
+
+            # split protease design
+            if state.split_protease_toggle_value:
+                if not custom_protease:
+                    split_n_col, split_c_col = st.columns(2)
+
+                    # choose split parts from either pre-defined or custom
+                    with split_n_col:
+                        st.markdown("#### N-Terminus")
+
+                        # split protease selection
+                        n_protease_selection = st.radio(
+                            "Pick N-Terminal TEV-Protease",
+                            options=NTEV_DATA.keys(),
+                            label_visibility="collapsed"
+                        )
+
+                        n_protease_sequence = st.code(
+                            NTEV_DATA[n_protease_selection][1],
+                            language="text",
+                            wrap_lines=True
+                        )
+
+                    with split_c_col:
+                        st.markdown("#### C-Terminus")
+
+                        # split protease selection
+                        c_protease_selection = st.radio(
+                            "Pick C-Terminal TEV-Protease",
+                            options=CTEV_DATA.keys(),
+                            label_visibility="collapsed"
+                        )
+
+                        c_protease_sequence = st.code(
+                            CTEV_DATA[c_protease_selection][1],
+                            language="text",
+                            wrap_lines=True
+                        )
+                else:
+                    st.markdown("#### Custom Protease")
+                    st.info("You can use [SPELL](https://dokhlab.med.psu.edu/spell/login.php) to guide your splitting process!")
+
+                    split_n_col, split_c_col = st.columns(2)
+
+                    with split_n_col:
+                        st.markdown("##### N-Terminus")
+                        n_protease_sequence_entry = st.text_area(
+                            label="N-Terminus",
+                            value="",
+                            height="content",
+                            max_chars=5000,
+                            placeholder="Enter n-terminal protease sequence",
+                            label_visibility="collapsed"
+                        )
+
+                    with split_c_col:
+                        st.markdown("##### C-Terminus")
+                        c_protease_sequence_entry = st.text_area(
+                            label="C-Terminus",
+                            value="",
+                            height="content",
+                            max_chars=5000,
+                            placeholder="Enter c-terminal protease sequence",
+                            label_visibility="collapsed"
+                        )
+
+            # complete protease design
+            else:
+                if not custom_protease:
+                    st.markdown("#### Protease Selection")
+
+                    selection_col, sequence_col = st.columns([0.5, 2], vertical_alignment="bottom")
+
+                    with selection_col:
+                        # select from existing proteases
+                        complete_protease_selection = st.radio(
+                            label="Select protease",
+                            options=TEVP_DATA.keys(),
+                            label_visibility="collapsed"
+                        )
+
+                    with sequence_col:
+                        st.code(
+                            TEVP_DATA[complete_protease_selection][1],
+                            language="text",
+                            wrap_lines=True
+                        )
+                else:
+                    st.markdown("#### Protease Sequence")
+
+                    complete_protease_sequence = st.text_area(
+                        label="Protease Sequence",
+                        value="",
+                        height="content",
+                        max_chars=5000,
+                        label_visibility="collapsed",
+                        placeholder="Enter protease sequence"
+                    )
+
+        # target design
+        st.subheader("Target Design")
+        target_design_container = st.container(border=True)
+
+        with target_design_container:
+            custom_prs = st.toggle(
+                label="Custom PRS",
+                value=False,
+                key="custom_prs_toggle",
+                help="Enter a custom PRS or use an existing version",
+            )
+
+            # pick from default TEVp PRS
+            if not custom_prs:
+                st.markdown("#### TEVp PRS Variant Selection")
+
+                prs_selection_col, prs_seq_col = st.columns([0.5, 2], vertical_alignment="bottom")
+                with prs_selection_col:
+                    prs_selection = st.radio(
+                        label="PRS Selection",
+                        options=PRS_DATA.keys(),
+                        label_visibility="collapsed"
+                    )
+
+                with prs_seq_col:
+                    prs_sequence_display = st.code(
+                        PRS_DATA[prs_selection][1],
+                        language="text",
+                        wrap_lines=True
+                    )
+
+            # enter custom PRS sequence
+            else:
+                st.markdown("#### PRS Sequence")
+                prs_sequence = st.text_area(
+                    label="Custom PRS Sequence",
+                    value="",
+                    height="content",
+                    max_chars=5000,
+                    label_visibility="collapsed"
+                )
+
+            # target sequence
+            st.markdown("#### Target Sequence")
+            target_sequence = st.text_area(
+                label="Target Sequence",
+                value="",
+                height="content",
+                label_visibility="collapsed",
+                placeholder="Enter target sequence",
+                max_chars=10000
+            )
+
+    # further options
+    st.subheader("Further Options")
+    further_options_container = st.container(border=True)
+
+    with further_options_container:
+        # include auto-inhibitory peptide
+        aip_toggle = st.toggle(
+            label="Include AIP",
+            value=False,
+            key="include_aip",
+            help="Include Auto-Inhibitory Peptide. Can reduce background noise by inhibiting Protease"
+        )
+
+        if aip_toggle:
+            st.markdown("#### AIP Selection")
+            aip_selection_col, aip_seq_col = st.columns([0.5, 2], vertical_alignment="bottom")
+            with aip_selection_col:
+                aip_selection = st.radio(
+                    label="AIP Selection",
+                    options=AIP_DATA.keys(),
+                    label_visibility="collapsed"
+                )
+
+            with aip_seq_col:
+                st.code(
+                    AIP_DATA[aip_selection][1],
+                    language="text",
+                    wrap_lines=True
+                )
+
+    # pick if ECD FRET test should be done after building complete construct
+
+
+
+
+# TODO: TEV picker
+#   - Protease/Target Chain or Split
+#   - Protease/Target: pick protease and optional AIP && build target chain: pick PRS & enter target
+#   - Split: link to SPELL for user to split their target protein or use default
+
+
+
+
+
 # TODO: complete download into zip file of all files
 # download button for structure
 #        with zipfile.ZipFile(file="download.zip")
 #        with open(state.pdbs[pdb_selection], "rb") as f:
 #            state.pdb_fasta = extract_fasta_from_pdb(state.pdbs[pdb_selection])
 #            st.download_button(label="⬇️", data=f, file_name=f"{pdb_selection}.pdb")
+
+# TODO: use containers to create clear design units
