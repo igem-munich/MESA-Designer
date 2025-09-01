@@ -972,4 +972,3 @@ if state.pdbs and len(state.highlight_selection) > 0:
 # TODO: use containers to create clear design units
 # TODO: unify naming conventions
 # TODO: provide comments
-# TODO: create docker container
