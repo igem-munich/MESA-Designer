@@ -1,0 +1,22 @@
+{
+  "AIP": [
+    "GAGTTGGTTTATTCCCAATAG",
+    "ELVYSQ"
+  ],
+  "AIP(M)": [
+    "GAACTGGTATATTCCCAGATG",
+    "ELVYSQM"
+  ],
+  "AIP(A)": [
+    "GAGCTGGTGTACTCACAGGCT",
+    "ELVYSQA"
+  ],
+  "AIP(K)": [
+    "GAGCTTGTGTACTCACAAAAA",
+    "ELVYSQK"
+  ],
+  "AIP(Y)": [
+    "GAGTTGGTCTACTCACAATAC",
+    "ELVYSQY"
+  ]
+}
