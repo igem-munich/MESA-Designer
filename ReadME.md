@@ -15,3 +15,11 @@ As a final setup step you need to download all necessary structures and database
 
 ## Usage
 To start the tool, please run `streamlit run ./app/main.py` from the main directory!
+
+## Docker
+The MESA-Designer tool can now also be run as a docker container. Please find it [here](https://hub.docker.com/repository/docker/aeneastews/mesa-designer/general).
+
+### Running docker container
+You can run the docker container using : `docker run -p 8501:8501 mesa-designer`
+
+It can then be accessed from a webbrowser at localhost:8501
