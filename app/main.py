@@ -168,12 +168,15 @@ with col2:
     search_button = st.button("", key="search_button", icon=":material/search:", width=45)
 
 # search database and display options
+if search_field:
+    with st.spinner(f"Searching for: **{search_field}**"):
+        state.sabdab, state.skempi, state.pdbs = search_antibodies(search_field)
+
 if search_button:
     if search_field:
         with st.spinner(f"Searching for: **{search_field}**"):
             state.sabdab, state.skempi, state.pdbs = search_antibodies(search_field)
-    else:
-        st.error("Please enter a search query.")
+
 
 if state.sabdab is not None:
     if len(state.sabdab) > 0:
