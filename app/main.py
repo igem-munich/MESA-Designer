@@ -80,7 +80,7 @@ def update_split_protease_value():
 
 def update_linker_text_input(chain_id):
     state.linkers[f"{chain_id}_linker"] = state[f"{chain_id}_linker_sequence"].upper()
-    
+
 def generate_download() -> None:
     zip_buffer = io.BytesIO()
 
@@ -969,6 +969,10 @@ if state.pdbs and len(state.highlight_selection) > 0:
                 mime="application/zip"
             )
 
-# TODO: use containers to create clear design units
 # TODO: unify naming conventions
 # TODO: provide comments
+# TODO: fasta annotation from uniprot
+# TODO: genbank downloads
+# TODO: score every component
+# TODO: LLM questions
+# TODO: docker container

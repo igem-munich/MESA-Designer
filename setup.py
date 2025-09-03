@@ -42,6 +42,11 @@ def download_file(url: str, file_path: str) -> bool:
         # Return False if an error occurred during download.
         return False
 
+# check if download is complete
+if Path("./files/done.txt").exists():
+    print("Files already downloaded!\nIf you wish to re-download, please remove '/files/done.txt'")
+    exit()
+
 # create dictionaries for databases
 Path.mkdir(Path("./data"))
 Path.mkdir(Path("./files"))
@@ -159,5 +164,8 @@ os.rename(Path("./files/all_structures"), Path("./files/sabdab_structures"))
 print("Successfully downloaded sabdab pdb files!")
 
 print("Successfully setup databases!")
+
+# track completed download
+open("./files/done.txt", "a").close()
 
 # TODO: (optional) clean-up and tracking of installed files
