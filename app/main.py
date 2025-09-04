@@ -2,6 +2,15 @@ from datetime import datetime
 import json
 import io
 import zipfile
+from pathlib import Path
+import sys
+
+# add main directory to system path for imports
+current_dir = Path(__file__).resolve().parent
+project_root = current_dir.parent
+sys.path.insert(0, str(project_root))
+
+
 from util.general import new_random_color
 from util.pdb_interaction import extract_chains_from_pdb
 from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs
@@ -10,12 +19,6 @@ from annotated_text import annotated_text
 import py3Dmol
 from stmol import *
 import streamlit as st
-from pathlib import Path
-import sys
-# add main directory to system path for imports
-current_dir = Path(__file__).resolve().parent
-project_root = current_dir.parent
-sys.path.insert(0, str(project_root))
 
 # regular code
 
@@ -77,7 +80,7 @@ if "themes" not in state:
 def update_chain_highlight_selection(chain_id_to_toggle, current_pdb_selection):
     # Access the actual state of the specific checkbox that was changed
     checkbox_key = f"{current_pdb_selection}_checkbox_chain_{chain_id_to_toggle}"
-    pdb_chain_data = extract_chains_from_pdb(state.pdbs[pdb_selection])
+    pdb_chain_data = extract_chains_from_pdb(state.pdbs[current_pdb_selection])
     lengths = {chain_data["chain_id"]: len(
         chain_data["sequence"]) for chain_data in pdb_chain_data}
 
@@ -242,46 +245,43 @@ if search_button:
     else:
         st.error("Please enter a search query.")
 
-
 if state.sabdab is not None:
     if len(state.sabdab) > 0:
-        st.dataframe(state.sabdab)
+        st.subheader("Select Binder")
+        selection = st.dataframe(state.sabdab, selection_mode="single-row", on_select="rerun")
+        try:
+            state["pdb_selection"] = state.sabdab.iloc[selection["selection"]["rows"]]["pdb"].to_numpy()[0]
+        except:
+            state["pdb_selection"] = 0
+
     else:
         st.info("No targets were found")
-
 ### Display Found Binder Structures ####################################################################################
 # create new columns for displaying pdb structure
-if state.pdbs:
+if state.pdbs and state["pdb_selection"]:
     st.header("Inspect Structures")
     col3, col4 = st.columns([0.2, 1])
 
     # display radio selection and chain/residue selection
     with col3:
-
-        st.subheader("Select Binder")
-        pdb_selection = st.radio(
-            label="PDB Selection",
-            options=state.pdbs,
-            label_visibility="collapsed"
-        )
-
+        prev_pdb_selection = None
         # Re-extract chains and reset selection if PDB selection changes
-        if state.prev_pdb_selection != pdb_selection:
+        if  isinstance(state["pdb_selection"], str):
+
             state.current_pdb_chains_data = extract_chains_from_pdb(
-                state.pdbs[pdb_selection])
-            state.highlight_selection = {}  # Clear previous selection
+                state.pdbs[state["pdb_selection"]])
+            #state.highlight_selection = {}  # Clear previous selection
 
             # generate color for every chain
             state.chain_colors = {}
             for chain_data in state.current_pdb_chains_data:
                 state.chain_colors[chain_data["chain_id"]] = new_random_color(
                     list(state.chain_colors.values()))
-
-            state.prev_pdb_selection = pdb_selection
-
-        # Chain selection
+            prev_pdb_selection = state["pdb_selection"]
+        elif isinstance(prev_pdb_selection, str):
+            state["pdb_selection"] = prev_pdb_selection
+            # Chain selection
         st.subheader("Select Chains")
-
         # Create checkboxes for each chain
         for chain_info in state.current_pdb_chains_data:
             chain_id = chain_info["chain_id"]
@@ -292,27 +292,26 @@ if state.pdbs:
             with col_pdb_selection_left:
                 st.checkbox(
                     f"Chain {chain_id}",
-                    key=f"{pdb_selection}_checkbox_chain_{chain_id}",
+                    key=f"{state["pdb_selection"]}_checkbox_chain_{chain_id}",
                     value=(chain_id in state.highlight_selection.keys()),
                     on_change=update_chain_highlight_selection,
-                    args=(chain_id, pdb_selection)
+                    args=(chain_id, state["pdb_selection"])
                 )
-
             with col_pdb_selection_right:
-                checkbox_key = f"{pdb_selection}_checkbox_chain_{chain_id}"
+                checkbox_key = f"{state["pdb_selection"]}_checkbox_chain_{chain_id}"
                 if state[checkbox_key]:
                     st.text_input(
                         f"Residues in Chain {chain_id}",
-                        key=f"{pdb_selection}_residue_input_chain_{chain_id}",
+                        key=f"{state["pdb_selection"]}_residue_input_chain_{chain_id}",
                         value=f"{state.highlight_selection[chain_id][0]}:{state.highlight_selection[chain_id][-1]}",
                         on_change=update_chain_highlight_selection_residues,
-                        args=(chain_id, pdb_selection),
+                        args=(chain_id, state["pdb_selection"]),
                         label_visibility="collapsed"
                     )
 
     with col4:
         # display selected residues using py3dmol
-        with open(state.pdbs[pdb_selection], "r") as f:
+        with open(state.pdbs[state["pdb_selection"]], "r") as f:
             # create py3Dmol view
             view = py3Dmol.view(width=1200, height=500, style={
                                 "opacity": 0.5, "backgroundColor": state.themes[state.themes["current_theme"]]["theme.backgroundColor"]})
@@ -347,7 +346,7 @@ if state.pdbs:
         fasta = ""
 
         # get data
-        pdb_data = extract_chains_from_pdb(state.pdbs[pdb_selection])
+        pdb_data = extract_chains_from_pdb(state.pdbs[state["pdb_selection"]])
 
         # iterate through pdb entries and add selected chains/residues to fasta string
         for chain_data in pdb_data:
@@ -374,7 +373,7 @@ if state.pdbs:
 
 ### Build linker between Binder and TMD ################################################################################
 # TODO OPTIONAL: more options for linker building
-if state.pdbs and len(state.highlight_selection) > 0:
+if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
     st.divider()
     st.header("Linker Design")
 
@@ -426,7 +425,7 @@ if state.pdbs and len(state.highlight_selection) > 0:
 
 ### TMD picker #########################################################################################################
 # TODO: let user enter custom TMDs
-if state.pdbs and len(state.highlight_selection) > 0:
+if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
     st.divider()
     st.header("TMD Picker")
 
@@ -459,7 +458,7 @@ if state.pdbs and len(state.highlight_selection) > 0:
 
 # TODO OPTIONAL: view the different TMDs and view their combinations
 ### INTRACELLULAR PART DESIGNER ########################################################################################
-if state.pdbs and len(state.highlight_selection) > 0:
+if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
     st.divider()
     st.header("Intracellular Component")
 
@@ -840,7 +839,7 @@ if state.pdbs and len(state.highlight_selection) > 0:
         )
 
 ### DOWNLOAD AND OVERVIEW ##############################################################################################
-if state.pdbs and len(state.highlight_selection) > 0:
+if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
     st.divider()
     st.header("Component Overview")
     overview_container = st.container(border=True)
@@ -997,7 +996,7 @@ if state.pdbs and len(state.highlight_selection) > 0:
                             TEVP_DATA[state.complete_protease_selection][1] if not state.custom_protease_toggle else state.custom_protease_sequence, "Protease", "#6b46b9")])
                         if chain_id in state.aip_chain_association:
                             construct_list[f"{chain_id}_Protease"].append(
-                                (AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
+	                                (AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
 
                 # create FRET sequences
                 if state.fret_chains_toggle:
@@ -1074,3 +1073,7 @@ if state.pdbs and len(state.highlight_selection) > 0:
 # TODO: score every component
 # TODO: LLM questions
 # TODO: docker container
+
+
+
+
