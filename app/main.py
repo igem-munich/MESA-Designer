@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+
 # add main directory to system path for imports
 current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent
@@ -11,7 +12,7 @@ from stmol import *
 import py3Dmol
 from annotated_text import annotated_text
 from util.antibody_search import search_antibodies
-from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs
+from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs, CHAIN_COLORS
 from util.pdb_interaction import extract_chains_from_pdb
 from util.general import new_random_color
 import zipfile
@@ -40,8 +41,6 @@ if "highlight_selection" not in state:
     state.highlight_selection = {}
 if "prev_pdb_selection" not in state:
     state.prev_pdb_selection = None
-if "chain_colors" not in state:
-    state.chain_colors = {}
 if "binder_fasta" not in state:
     state.binder_fasta = ""
 if "protease_chain_association" not in state:
@@ -64,7 +63,7 @@ if "themes" not in state:
         "dark": {
             "theme.base": "dark",
             "theme.backgroundColor": "#0E1117",
-            "theme.primaryColor": "#FF4B4B",
+            "theme.primaryColor": "#7D2593",
             "theme.secondaryBackgroundColor": "#262730",
             "theme.textColor": "#FAFAFA",
             "button_face": "🌞",
@@ -73,7 +72,7 @@ if "themes" not in state:
         "light":  {
             "theme.base": "light",
             "theme.backgroundColor": "#FFFFFF",
-            "theme.primaryColor": "#FF4B4B",
+            "theme.primaryColor": "#7D2593",
             "theme.secondaryBackgroundColor": "#F0F2F6",
             "theme.textColor": "#31333F",
             "button_face": "🌜",
@@ -281,12 +280,6 @@ if state.pdbs:
                 state.pdbs[pdb_selection])
             state.highlight_selection = {}  # Clear previous selection
 
-            # generate color for every chain
-            state.chain_colors = {}
-            for chain_data in state.current_pdb_chains_data:
-                state.chain_colors[chain_data["chain_id"]] = new_random_color(
-                    list(state.chain_colors.values()))
-
             state.prev_pdb_selection = pdb_selection
 
         # Chain selection
@@ -334,7 +327,7 @@ if state.pdbs:
         for chain_id in state.highlight_selection.keys():
             for residue_index in state.highlight_selection[chain_id]:
                 view.setStyle({"chain": chain_id, "resi": residue_index}, {"cartoon": {
-                              "color": state.chain_colors[chain_id], "arrows": True}})
+                              "color": CHAIN_COLORS[chain_id], "arrows": True}})
 
         # add hover functionality (chain, residue, residue number)
         view.setHoverable({}, True,"""

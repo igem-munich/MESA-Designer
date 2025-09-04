@@ -26,3 +26,6 @@ with open(RESOURCES_DIR / "intracellular/TEVp_list.json", "r") as f:
 
 with open(RESOURCES_DIR / "prs/prs_list.json", "r") as f:
     PRS_DATA: dict = dict(json.load(f))
+
+with open(RESOURCES_DIR / "colors/chain_colors.json", "r") as f:
+    CHAIN_COLORS: dict = dict(json.load(f))
