@@ -58,27 +58,38 @@ if "download_data" not in state:
 if "prev_search" not in state:
     state.prev_search = ""
 if "themes" not in state:
-    state.themes = {"current_theme": "light",
-                "refreshed": True,
-                "light": {"theme.base": "dark",
-                            "theme.backgroundColor": "black",
-                            "theme.primaryColor": "#c98bdb",
-                            "theme.secondaryBackgroundColor": "#5591f5",
-                            "theme.textColor": "white",
-                            "theme.textColor": "white",
-                            "button_face": "🌜"},
-                "dark":  {"theme.base": "light",
-                            "theme.backgroundColor": "white",
-                            "theme.primaryColor": "#5591f5",
-                            "theme.secondaryBackgroundColor": "#82E1D7",
-                            "theme.textColor": "#0a1464",
-                            "button_face": "🌞"},
-                }
+    state.themes = {
+        "current_theme": "dark",
+        "refreshed": True,
+        "dark": {
+            "theme.base": "dark",
+            "theme.backgroundColor": "#0E1117",
+            "theme.primaryColor": "#FF4B4B",
+            "theme.secondaryBackgroundColor": "#262730",
+            "theme.textColor": "#FAFAFA",
+            "button_face": "🌞",
+            "button_icon": ":material/light_mode:"
+        },
+        "light":  {
+            "theme.base": "light",
+            "theme.backgroundColor": "#FFFFFF",
+            "theme.primaryColor": "#FF4B4B",
+            "theme.secondaryBackgroundColor": "#F0F2F6",
+            "theme.textColor": "#31333F",
+            "button_face": "🌜",
+            "button_icon": ":material/dark_mode:"
+        }
+    }
 
-def update_chain_highlight_selection(chain_id_to_toggle, current_pdb_selection):
+    # init settings to dark mode
+    for key, value in state.themes["dark"].items():
+        if key.startswith("theme"):
+            st._config.set_option(key, value)
+
+def update_chain_highlight_selection(chain_id_to_toggle: str, current_pdb_selection: str) -> None:
     # Access the actual state of the specific checkbox that was changed
-    checkbox_key = f"{current_pdb_selection}_checkbox_chain_{chain_id_to_toggle}"
-    pdb_chain_data = extract_chains_from_pdb(state.pdbs[pdb_selection])
+    checkbox_key: str = f"{current_pdb_selection}_checkbox_chain_{chain_id_to_toggle}"
+    pdb_chain_data: list[dict] = extract_chains_from_pdb(state.pdbs[pdb_selection])
     lengths = {chain_data["chain_id"]: len(
         chain_data["sequence"]) for chain_data in pdb_chain_data}
 
@@ -91,7 +102,7 @@ def update_chain_highlight_selection(chain_id_to_toggle, current_pdb_selection):
             del state.highlight_selection[chain_id_to_toggle]
 
 
-def update_chain_highlight_selection_residues(chain_id_to_change, current_pdb_selection):
+def update_chain_highlight_selection_residues(chain_id_to_change: str, current_pdb_selection: str):
     input_key = f"{current_pdb_selection}_residue_input_chain_{chain_id_to_change}"
 
     if chain_id_to_change in state.highlight_selection.keys():
@@ -100,11 +111,11 @@ def update_chain_highlight_selection_residues(chain_id_to_change, current_pdb_se
             range(int(select_from), int(select_to) + 1))
 
 
-def update_split_protease_value():
+def update_split_protease_value() -> None:
     state.split_protease_toggle_value = not state.split_protease_toggle_value
 
 
-def update_linker_text_input(chain_id):
+def update_linker_text_input(chain_id: str) -> None:
     state.linkers[f"{chain_id}_linker"] = state[f"{chain_id}_linker_sequence"].upper()
 
 
@@ -184,10 +195,7 @@ def generate_download() -> None:
 
 
 # streamlit config
-
-
-
-def ChangeTheme():
+def change_theme() -> None:
     previous_theme = state.themes["current_theme"]
     tdict = state.themes["light"] if state.themes["current_theme"] == "dark" else state.themes["dark"]
     for vkey, vval in tdict.items():
@@ -201,25 +209,25 @@ def ChangeTheme():
         state.themes["current_theme"] = "dark"
 
 
-
-
-col1, col2 = st.columns([1, 0.1])
+col1, col2 = st.columns([1, 0.1], vertical_alignment="bottom")
 with col1:
     st.title("MESA-Design Tool")
 
-btn_face = state.themes["light"]["button_face"] if state.themes["current_theme"] == "light" else state.themes["dark"]["button_face"]
+# btn_face: str = state.themes["light"]["button_face"] if state.themes["current_theme"] == "light" else state.themes["dark"]["button_face"]
+btn_icon: str = state.themes["light"]["button_icon"] if state.themes["current_theme"] == "light" else state.themes["dark"]["button_icon"]
 with col2:
-    st.button(btn_face, width="stretch",on_click=ChangeTheme)
+    st.button("", icon=btn_icon, on_click=change_theme)
 
 if state.themes["refreshed"] == False:
     state.themes["refreshed"] = True
     st.rerun()
+
 st.set_page_config(layout="wide")
 
+### Target Search Field ################################################################################################
 # columns for search field and search button
 col1, col2 = st.columns([1, 0.1])
 
-### Target Search Field ################################################################################################
 # create search field and button
 with col1:
     search_field = st.text_input(label="Antigen-Search", key="search_input",
@@ -316,8 +324,9 @@ if state.pdbs:
         # display selected residues using py3dmol
         with open(state.pdbs[pdb_selection], "r") as f:
             # create py3Dmol view
-            view = py3Dmol.view(width=1200, height=500, style={
-                                "opacity": 0.5, "backgroundColor": state.themes[state.themes["current_theme"]]["theme.backgroundColor"]})
+            view = py3Dmol.view(width=1200, height=500)
+            view.setBackgroundColor(state.themes[state.themes["current_theme"]]["theme.backgroundColor"])
+
             # add protein model in cartoon view
             add_model(view, xyz=f.read(), model_style="cartoon")
 
@@ -327,22 +336,23 @@ if state.pdbs:
                 view.setStyle({"chain": chain_id, "resi": residue_index}, {"cartoon": {
                               "color": state.chain_colors[chain_id], "arrows": True}})
 
-        # TODO: extract non-protein sequences and add them separately in stick view (issue with finding small molecule)
-
         # add hover functionality (chain, residue, residue number)
-        view.setHoverable({}, True,
-                          '''function(atom,viewer,event,container) {
+        view.setHoverable({}, True,"""
+            function(atom,viewer,event,container) {
                 if(!atom.label) {
-                atom.label = viewer.addLabel(`Chain ${atom.chain}:${atom.resn}:${atom.resi}`,{position: atom, backgroundColor: 'mintcream', fontColor:'black'});
-               }}''',
-                          '''function(atom,viewer) { 
-               if(atom.label) {
-                viewer.removeLabel(atom.label);
-                delete atom.label;
-               }
-            }''')
+                    atom.label = viewer.addLabel(`Chain ${atom.chain}:${atom.resn}:${atom.resi}`,{position: atom, backgroundColor: 'mintcream', fontColor:'black'});
+                }
+            }""","""
+            function(atom,viewer) { 
+                if(atom.label) {
+                    viewer.removeLabel(atom.label);
+                    delete atom.label;
+                }
+            }""")
         view.zoomTo()
-        showmol(view, height=500, width=1200)
+
+        with st.container(border=True, gap="small"):
+            showmol(view, height=500, width=1200)
 
     # show current fasta selection to user
     if len(state.highlight_selection) != 0:
@@ -375,7 +385,6 @@ if state.pdbs:
         state.binder_fasta = fasta
 
 ### Build linker between Binder and TMD ################################################################################
-# TODO OPTIONAL: more options for linker building
 if state.pdbs and len(state.highlight_selection) > 0:
     st.divider()
     st.header("Linker Design")
@@ -427,7 +436,6 @@ if state.pdbs and len(state.highlight_selection) > 0:
         )
 
 ### TMD picker #########################################################################################################
-# TODO: let user enter custom TMDs
 if state.pdbs and len(state.highlight_selection) > 0:
     st.divider()
     st.header("TMD Picker")
@@ -458,8 +466,6 @@ if state.pdbs and len(state.highlight_selection) > 0:
 
         state.tmds[f"{chain_id}_tmd"] = TMD_DATA[tmd_selection][1]
 
-
-# TODO OPTIONAL: view the different TMDs and view their combinations
 ### INTRACELLULAR PART DESIGNER ########################################################################################
 if state.pdbs and len(state.highlight_selection) > 0:
     st.divider()
@@ -1068,11 +1074,3 @@ if state.pdbs and len(state.highlight_selection) > 0:
                 file_name="mesa-design.zip",
                 mime="application/zip"
             )
-
-# TODO: unify naming conventions
-# TODO: provide comments
-# TODO: fasta annotation from uniprot
-# TODO: genbank downloads
-# TODO: score every component
-# TODO: LLM questions
-# TODO: docker container
