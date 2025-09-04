@@ -55,6 +55,8 @@ if "construct_list_formatted" not in state:
     state.construct_list_formatted = {}
 if "download_data" not in state:
     state.download_data = None
+if "prev_search" not in state:
+    state.prev_search = ""
 if "themes" not in state:
     state.themes = {"current_theme": "light",
                 "refreshed": True,
@@ -72,7 +74,6 @@ if "themes" not in state:
                             "theme.textColor": "#0a1464",
                             "button_face": "🌞"},
                 }
-
 
 def update_chain_highlight_selection(chain_id_to_toggle, current_pdb_selection):
     # Access the actual state of the specific checkbox that was changed
@@ -229,16 +230,17 @@ with col2:
                               icon=":material/search:", width=45)
 
 # search database and display options
-if search_field:
+if search_field and state.prev_search != search_field:
     with st.spinner(f"Searching for: **{search_field}**"):
-        state.sabdab, state.skempi, state.pdbs = search_antibodies(
-            search_field)
+        state.sabdab, state.skempi, state.pdbs = search_antibodies(search_field)
+        state.prev_search = search_field
 
 if search_button:
     if search_field:
         with st.spinner(f"Searching for: **{search_field}**"):
-            state.sabdab, state.skempi, state.pdbs = search_antibodies(
-                search_field)
+            state.sabdab, state.skempi, state.pdbs = search_antibodies(search_field)
+            state.prev_search = search_field
+    
     else:
         st.error("Please enter a search query.")
 
