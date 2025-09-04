@@ -176,6 +176,8 @@ if search_button:
     if search_field:
         with st.spinner(f"Searching for: **{search_field}**"):
             state.sabdab, state.skempi, state.pdbs = search_antibodies(search_field)
+    else:
+        st.error("Please enter a search query.")
 
 
 if state.sabdab is not None:

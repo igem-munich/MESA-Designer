@@ -8,4 +8,6 @@
 /research/
 /files/
 /data/
-/venv/*
+/venv/
+/src/
+ReceptorsDB.db
