@@ -1,15 +1,3 @@
-from datetime import datetime
-import json
-import io
-import zipfile
-from util.general import new_random_color
-from util.pdb_interaction import extract_chains_from_pdb
-from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs
-from util.antibody_search import search_antibodies
-from annotated_text import annotated_text
-import py3Dmol
-from stmol import *
-import streamlit as st
 from pathlib import Path
 import sys
 # add main directory to system path for imports
@@ -18,6 +6,18 @@ project_root = current_dir.parent
 sys.path.insert(0, str(project_root))
 
 # regular code
+import streamlit as st
+from stmol import *
+import py3Dmol
+from annotated_text import annotated_text
+from util.antibody_search import search_antibodies
+from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs
+from util.pdb_interaction import extract_chains_from_pdb
+from util.general import new_random_color
+import zipfile
+import io
+import json
+from datetime import datetime
 
 # session state
 state = st.session_state
