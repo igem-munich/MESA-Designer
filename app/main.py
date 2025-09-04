@@ -221,7 +221,7 @@ if state.themes["refreshed"] == False:
     state.themes["refreshed"] = True
     st.rerun()
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="MESA-Designer", layout="wide", page_icon="🧬")
 page_width = streamlit_js_eval(js_expressions="window.innerWidth", key="WIDTH", want_output=True)
 print(page_width)
 
@@ -271,20 +271,18 @@ if state.pdbs and state["pdb_selection"]:
     pdb_cols = st.columns([0.2, 1, 0.2])
 
     # display radio selection and chain/residue selection
-    with col3:
+    with pdb_cols[0]:
         prev_pdb_selection = None
         # Re-extract chains and reset selection if PDB selection changes
         if  isinstance(state["pdb_selection"], str):
 
             state.current_pdb_chains_data = extract_chains_from_pdb(
-                state.pdbs[pdb_selection])
-            state.highlight_selection = {}  # Clear previous selection
+                state.pdbs[state["pdb_selection"]])
 
             # generate color for every chain
             state.chain_colors = {}
             for chain_data in state.current_pdb_chains_data:
-                state.chain_colors[chain_data["chain_id"]] = new_random_color(
-                    list(state.chain_colors.values()))
+                state.chain_colors[chain_data["chain_id"]] = list(state.chain_colors.values())
             prev_pdb_selection = state["pdb_selection"]
         elif isinstance(prev_pdb_selection, str):
             state["pdb_selection"] = prev_pdb_selection
@@ -443,7 +441,7 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
         )
 
 ### TMD picker #########################################################################################################
-if state.pdbs and len(state.highlight_selection) > 0:
+if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
     st.divider()
     st.header("TMD Picker")
 
