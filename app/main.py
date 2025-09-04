@@ -1,7 +1,3 @@
-from datetime import datetime
-import json
-import io
-import zipfile
 from pathlib import Path
 import sys
 
@@ -10,17 +6,19 @@ current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent
 sys.path.insert(0, str(project_root))
 
-
-from util.general import new_random_color
-from util.pdb_interaction import extract_chains_from_pdb
-from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs
-from util.antibody_search import search_antibodies
-from annotated_text import annotated_text
-import py3Dmol
-from stmol import *
-import streamlit as st
-
 # regular code
+import streamlit as st
+from stmol import *
+from streamlit_js_eval import streamlit_js_eval
+import py3Dmol
+from annotated_text import annotated_text
+from util.antibody_search import search_antibodies
+from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs, CHAIN_COLORS
+from util.pdb_interaction import extract_chains_from_pdb
+import zipfile
+import io
+import json
+from datetime import datetime
 
 # session state
 state = st.session_state
@@ -43,8 +41,6 @@ if "highlight_selection" not in state:
     state.highlight_selection = {}
 if "prev_pdb_selection" not in state:
     state.prev_pdb_selection = None
-if "chain_colors" not in state:
-    state.chain_colors = {}
 if "binder_fasta" not in state:
     state.binder_fasta = ""
 if "protease_chain_association" not in state:
@@ -58,29 +54,41 @@ if "construct_list_formatted" not in state:
     state.construct_list_formatted = {}
 if "download_data" not in state:
     state.download_data = None
+if "prev_search" not in state:
+    state.prev_search = ""
 if "themes" not in state:
-    state.themes = {"current_theme": "light",
-                "refreshed": True,
-                "light": {"theme.base": "dark",
-                            "theme.backgroundColor": "black",
-                            "theme.primaryColor": "#c98bdb",
-                            "theme.secondaryBackgroundColor": "#5591f5",
-                            "theme.textColor": "white",
-                            "theme.textColor": "white",
-                            "button_face": "🌜"},
-                "dark":  {"theme.base": "light",
-                            "theme.backgroundColor": "white",
-                            "theme.primaryColor": "#5591f5",
-                            "theme.secondaryBackgroundColor": "#82E1D7",
-                            "theme.textColor": "#0a1464",
-                            "button_face": "🌞"},
-                }
+    state.themes = {
+        "current_theme": "dark",
+        "refreshed": True,
+        "dark": {
+            "theme.base": "dark",
+            "theme.backgroundColor": "#0E1117",
+            "theme.primaryColor": "#7D2593",
+            "theme.secondaryBackgroundColor": "#262730",
+            "theme.textColor": "#FAFAFA",
+            "button_face": "🌞",
+            "button_icon": ":material/light_mode:"
+        },
+        "light":  {
+            "theme.base": "light",
+            "theme.backgroundColor": "#FFFFFF",
+            "theme.primaryColor": "#7D2593",
+            "theme.secondaryBackgroundColor": "#F0F2F6",
+            "theme.textColor": "#31333F",
+            "button_face": "🌜",
+            "button_icon": ":material/dark_mode:"
+        }
+    }
 
+    # init settings to dark mode
+    for key, value in state.themes["dark"].items():
+        if key.startswith("theme"):
+            st._config.set_option(key, value)
 
-def update_chain_highlight_selection(chain_id_to_toggle, current_pdb_selection):
+def update_chain_highlight_selection(chain_id_to_toggle: str, current_pdb_selection: str) -> None:
     # Access the actual state of the specific checkbox that was changed
-    checkbox_key = f"{current_pdb_selection}_checkbox_chain_{chain_id_to_toggle}"
-    pdb_chain_data = extract_chains_from_pdb(state.pdbs[current_pdb_selection])
+    checkbox_key: str = f"{current_pdb_selection}_checkbox_chain_{chain_id_to_toggle}"
+    pdb_chain_data: list[dict] = extract_chains_from_pdb(state.pdbs[current_pdb_selection])
     lengths = {chain_data["chain_id"]: len(
         chain_data["sequence"]) for chain_data in pdb_chain_data}
 
@@ -93,7 +101,7 @@ def update_chain_highlight_selection(chain_id_to_toggle, current_pdb_selection):
             del state.highlight_selection[chain_id_to_toggle]
 
 
-def update_chain_highlight_selection_residues(chain_id_to_change, current_pdb_selection):
+def update_chain_highlight_selection_residues(chain_id_to_change: str, current_pdb_selection: str):
     input_key = f"{current_pdb_selection}_residue_input_chain_{chain_id_to_change}"
 
     if chain_id_to_change in state.highlight_selection.keys():
@@ -102,11 +110,11 @@ def update_chain_highlight_selection_residues(chain_id_to_change, current_pdb_se
             range(int(select_from), int(select_to) + 1))
 
 
-def update_split_protease_value():
+def update_split_protease_value() -> None:
     state.split_protease_toggle_value = not state.split_protease_toggle_value
 
 
-def update_linker_text_input(chain_id):
+def update_linker_text_input(chain_id: str) -> None:
     state.linkers[f"{chain_id}_linker"] = state[f"{chain_id}_linker_sequence"].upper()
 
 
@@ -186,10 +194,7 @@ def generate_download() -> None:
 
 
 # streamlit config
-
-
-
-def ChangeTheme():
+def change_theme() -> None:
     previous_theme = state.themes["current_theme"]
     tdict = state.themes["light"] if state.themes["current_theme"] == "dark" else state.themes["dark"]
     for vkey, vval in tdict.items():
@@ -203,25 +208,27 @@ def ChangeTheme():
         state.themes["current_theme"] = "dark"
 
 
-
-
-col1, col2 = st.columns([1, 0.1])
+col1, col2 = st.columns([1, 0.1], vertical_alignment="bottom")
 with col1:
     st.title("MESA-Design Tool")
 
-btn_face = state.themes["light"]["button_face"] if state.themes["current_theme"] == "light" else state.themes["dark"]["button_face"]
+# btn_face: str = state.themes["light"]["button_face"] if state.themes["current_theme"] == "light" else state.themes["dark"]["button_face"]
+btn_icon: str = state.themes["light"]["button_icon"] if state.themes["current_theme"] == "light" else state.themes["dark"]["button_icon"]
 with col2:
-    st.button(btn_face, width="stretch",on_click=ChangeTheme)
+    st.button("", icon=btn_icon, on_click=change_theme)
 
 if state.themes["refreshed"] == False:
     state.themes["refreshed"] = True
     st.rerun()
-st.set_page_config(layout="wide")
 
+st.set_page_config(layout="wide")
+page_width = streamlit_js_eval(js_expressions="window.innerWidth", key="WIDTH", want_output=True)
+print(page_width)
+
+### Target Search Field ################################################################################################
 # columns for search field and search button
 col1, col2 = st.columns([1, 0.1])
 
-### Target Search Field ################################################################################################
 # create search field and button
 with col1:
     search_field = st.text_input(label="Antigen-Search", key="search_input",
@@ -232,16 +239,17 @@ with col2:
                               icon=":material/search:", width=45)
 
 # search database and display options
-if search_field:
+if search_field and state.prev_search != search_field:
     with st.spinner(f"Searching for: **{search_field}**"):
-        state.sabdab, state.skempi, state.pdbs = search_antibodies(
-            search_field)
+        state.sabdab, state.skempi, state.pdbs = search_antibodies(search_field)
+        state.prev_search = search_field
 
 if search_button:
     if search_field:
         with st.spinner(f"Searching for: **{search_field}**"):
-            state.sabdab, state.skempi, state.pdbs = search_antibodies(
-                search_field)
+            state.sabdab, state.skempi, state.pdbs = search_antibodies(search_field)
+            state.prev_search = search_field
+    
     else:
         st.error("Please enter a search query.")
 
@@ -260,7 +268,7 @@ if state.sabdab is not None:
 # create new columns for displaying pdb structure
 if state.pdbs and state["pdb_selection"]:
     st.header("Inspect Structures")
-    col3, col4 = st.columns([0.2, 1])
+    pdb_cols = st.columns([0.2, 1, 0.2])
 
     # display radio selection and chain/residue selection
     with col3:
@@ -269,8 +277,8 @@ if state.pdbs and state["pdb_selection"]:
         if  isinstance(state["pdb_selection"], str):
 
             state.current_pdb_chains_data = extract_chains_from_pdb(
-                state.pdbs[state["pdb_selection"]])
-            #state.highlight_selection = {}  # Clear previous selection
+                state.pdbs[pdb_selection])
+            state.highlight_selection = {}  # Clear previous selection
 
             # generate color for every chain
             state.chain_colors = {}
@@ -309,37 +317,48 @@ if state.pdbs and state["pdb_selection"]:
                         label_visibility="collapsed"
                     )
 
-    with col4:
+    with pdb_cols[2]:
+        st.subheader("Display Style")
+        display_style = st.radio(
+            label="Display Style",
+            options=["line", "cross", "stick", "sphere", "cartoon"],
+            index=4,
+            label_visibility="collapsed"
+        )
+
+    with pdb_cols[1]:
         # display selected residues using py3dmol
         with open(state.pdbs[state["pdb_selection"]], "r") as f:
             # create py3Dmol view
-            view = py3Dmol.view(width=1200, height=500, style={
-                                "opacity": 0.5, "backgroundColor": state.themes[state.themes["current_theme"]]["theme.backgroundColor"]})
+            view = py3Dmol.view(width=page_width, height=500)
+            view.setBackgroundColor(state.themes[state.themes["current_theme"]]["theme.backgroundColor"])
+
             # add protein model in cartoon view
-            add_model(view, xyz=f.read(), model_style="cartoon")
+            add_model(view, xyz=f.read(), model_style=display_style)
 
         # set viewstyle based on selection
         for chain_id in state.highlight_selection.keys():
             for residue_index in state.highlight_selection[chain_id]:
-                view.setStyle({"chain": chain_id, "resi": residue_index}, {"cartoon": {
-                              "color": state.chain_colors[chain_id], "arrows": True}})
-
-        # TODO: extract non-protein sequences and add them separately in stick view (issue with finding small molecule)
+                view.setStyle({"chain": chain_id, "resi": residue_index}, {display_style: {
+                              "color": CHAIN_COLORS[chain_id], "arrows": True}})
 
         # add hover functionality (chain, residue, residue number)
-        view.setHoverable({}, True,
-                          '''function(atom,viewer,event,container) {
+        view.setHoverable({}, True,"""
+            function(atom,viewer,event,container) {
                 if(!atom.label) {
-                atom.label = viewer.addLabel(`Chain ${atom.chain}:${atom.resn}:${atom.resi}`,{position: atom, backgroundColor: 'mintcream', fontColor:'black'});
-               }}''',
-                          '''function(atom,viewer) { 
-               if(atom.label) {
-                viewer.removeLabel(atom.label);
-                delete atom.label;
-               }
-            }''')
+                    atom.label = viewer.addLabel(`Chain ${atom.chain}:${atom.resn}:${atom.resi}`,{position: atom, backgroundColor: 'mintcream', fontColor:'black'});
+                }
+            }""","""
+            function(atom,viewer) { 
+                if(atom.label) {
+                    viewer.removeLabel(atom.label);
+                    delete atom.label;
+                }
+            }""")
         view.zoomTo()
-        showmol(view, height=500, width=1200)
+
+        with st.container(border=True, gap="small"):
+            showmol(view, height=500, width=page_width)
 
     # show current fasta selection to user
     if len(state.highlight_selection) != 0:
@@ -424,8 +443,7 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
         )
 
 ### TMD picker #########################################################################################################
-# TODO: let user enter custom TMDs
-if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
+if state.pdbs and len(state.highlight_selection) > 0:
     st.divider()
     st.header("TMD Picker")
 
@@ -455,8 +473,6 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
 
         state.tmds[f"{chain_id}_tmd"] = TMD_DATA[tmd_selection][1]
 
-
-# TODO OPTIONAL: view the different TMDs and view their combinations
 ### INTRACELLULAR PART DESIGNER ########################################################################################
 if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
     st.divider()
@@ -1065,15 +1081,3 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
                 file_name="mesa-design.zip",
                 mime="application/zip"
             )
-
-# TODO: unify naming conventions
-# TODO: provide comments
-# TODO: fasta annotation from uniprot
-# TODO: genbank downloads
-# TODO: score every component
-# TODO: LLM questions
-# TODO: docker container
-
-
-
-
