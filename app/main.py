@@ -9,12 +9,12 @@ sys.path.insert(0, str(project_root))
 # regular code
 import streamlit as st
 from stmol import *
+from streamlit_js_eval import streamlit_js_eval
 import py3Dmol
 from annotated_text import annotated_text
 from util.antibody_search import search_antibodies
 from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs, CHAIN_COLORS
 from util.pdb_interaction import extract_chains_from_pdb
-from util.general import new_random_color
 import zipfile
 import io
 import json
@@ -222,6 +222,8 @@ if state.themes["refreshed"] == False:
     st.rerun()
 
 st.set_page_config(layout="wide")
+page_width = streamlit_js_eval(js_expressions="window.innerWidth", key="WIDTH", want_output=True)
+print(page_width)
 
 ### Target Search Field ################################################################################################
 # columns for search field and search button
@@ -262,10 +264,10 @@ if state.sabdab is not None:
 # create new columns for displaying pdb structure
 if state.pdbs:
     st.header("Inspect Structures")
-    col3, col4 = st.columns([0.2, 1])
+    pdb_cols = st.columns([0.2, 1, 0.2])
 
     # display radio selection and chain/residue selection
-    with col3:
+    with pdb_cols[0]:
 
         st.subheader("Select Binder")
         pdb_selection = st.radio(
@@ -313,20 +315,29 @@ if state.pdbs:
                         label_visibility="collapsed"
                     )
 
-    with col4:
+    with pdb_cols[2]:
+        st.subheader("Display Style")
+        display_style = st.radio(
+            label="Display Style",
+            options=["line", "cross", "stick", "sphere", "cartoon"],
+            index=4,
+            label_visibility="collapsed"
+        )
+
+    with pdb_cols[1]:
         # display selected residues using py3dmol
         with open(state.pdbs[pdb_selection], "r") as f:
             # create py3Dmol view
-            view = py3Dmol.view(width=1200, height=500)
+            view = py3Dmol.view(width=page_width, height=500)
             view.setBackgroundColor(state.themes[state.themes["current_theme"]]["theme.backgroundColor"])
 
             # add protein model in cartoon view
-            add_model(view, xyz=f.read(), model_style="cartoon")
+            add_model(view, xyz=f.read(), model_style=display_style)
 
         # set viewstyle based on selection
         for chain_id in state.highlight_selection.keys():
             for residue_index in state.highlight_selection[chain_id]:
-                view.setStyle({"chain": chain_id, "resi": residue_index}, {"cartoon": {
+                view.setStyle({"chain": chain_id, "resi": residue_index}, {display_style: {
                               "color": CHAIN_COLORS[chain_id], "arrows": True}})
 
         # add hover functionality (chain, residue, residue number)
@@ -345,7 +356,7 @@ if state.pdbs:
         view.zoomTo()
 
         with st.container(border=True, gap="small"):
-            showmol(view, height=500, width=1200)
+            showmol(view, height=500, width=page_width)
 
     # show current fasta selection to user
     if len(state.highlight_selection) != 0:
