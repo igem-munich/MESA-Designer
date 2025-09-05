@@ -37,11 +37,20 @@ def search_antibodies(antigen: str, filter_structures: bool=True):
         
         # retrieve pdb files
         pdb_files[pdb] = []
-        pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR)+"/abdb_structures/chothia")
+        
+        if Path(str(FILES_DIR) + "/sabdab_structures/imgt/"+ pdb+".pdb").is_file():
+            pdb_files[pdb] = [Path(str(FILES_DIR) + "/sabdab_structures/imgt/"+ pdb+".pdb")] 
+        if pdb_files[pdb] == []:
+            if Path(str(FILES_DIR) + "/sabdab_structures/imgt/"+ pdb+".pdb").is_file():
+                pdb_files[pdb] = [Path(str(FILES_DIR) + "/sabdab_structures/chothia/"+ pdb+".pdb")] 
+        if pdb_files[pdb] == []:
+            if Path(str(FILES_DIR) + "/sabdab_structures/imgt/"+ pdb+".pdb").is_file():
+                pdb_files[pdb] = [Path(str(FILES_DIR) + "/sabdab_structures/raw/"+ pdb+".pdb")] 
         if pdb_files[pdb] == []:
             pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR)+"/skempi_structures")
         if pdb_files[pdb] == []:
-            pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR)+"/sabdab_structures")
+            pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR)+"/abdb_structures/chothia")
+
         
         if(len(pdb_files[pdb]) == 0):
             pdb_files[pdb] = ""
