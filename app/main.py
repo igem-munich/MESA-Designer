@@ -443,33 +443,44 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
 ### TMD picker #########################################################################################################
 if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
     st.divider()
-    st.header("TMD Picker")
+    # transmembran/intracellular mesa
+    st.toggle(
+        label="Transmembrane Design",
+        value=True,
+        key="transmembrane_mesa"
+    )
 
-    if len(state.highlight_selection) < 1:
-        st.error("Select chains to create TMDS")
+    if state.transmembrane_mesa:
+        st.header("TMD Picker")
 
-    for chain_id in state.highlight_selection:
-        # update tmd state
-        if f"{chain_id}_tmd" not in state.tmds:
-            state.tmds[f"{chain_id}_tmd"] = ""
+        if len(state.highlight_selection) < 1:
+            st.error("Select chains to create TMDS")
 
-        st.subheader(f"{chain_id} TMD")
+        for chain_id in state.highlight_selection:
+            # update tmd state
+            if f"{chain_id}_tmd" not in state.tmds:
+                state.tmds[f"{chain_id}_tmd"] = ""
 
-        tmd_selection = st.radio(
-            label="tmd_selection",
-            options=TMD_DATA.keys(),
-            horizontal=True,
-            label_visibility="collapsed",
-            key=f"{chain_id}_tmd_selection"
-        )
-        st.code(
-            TMD_DATA[tmd_selection][1],
-            language="text",
-            height="content",
-            wrap_lines=True
-        )
+            st.subheader(f"{chain_id} TMD")
 
-        state.tmds[f"{chain_id}_tmd"] = TMD_DATA[tmd_selection][1]
+            tmd_selection = st.radio(
+                label="tmd_selection",
+                options=TMD_DATA.keys(),
+                horizontal=True,
+                label_visibility="collapsed",
+                key=f"{chain_id}_tmd_selection"
+            )
+            st.code(
+                TMD_DATA[tmd_selection][1],
+                language="text",
+                height="content",
+                wrap_lines=True
+            )
+
+            state.tmds[f"{chain_id}_tmd"] = TMD_DATA[tmd_selection][1]
+
+    else:
+        state.tmds.clear()
 
 ### INTRACELLULAR PART DESIGNER ########################################################################################
 if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
@@ -516,6 +527,23 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
                 help="Split protease: The TEV-Protease or custom protein is split into two chains. Separate Chains: The TEV-Protease is fully assembled on one chain and the protein recognition sequence and target are on the other chain",
                 on_change=update_split_protease_value
             )
+
+            if split_protease:
+                # release protease on receptor dimerization
+                release_protease = st.toggle(
+                    label="Release Protease",
+                    help="Move PRS before Protease. This cuts PRS chain upon Receptor Dimerization and releases Protease intracellularly",
+                    value=False,
+                    key="release_protease_toggle"
+                )
+
+                # separate target and protease if protease self-cleaves
+                st.toggle(
+                    label="Release Target",
+                    help="Keep protease and target connected or separate them upon Receptor Dimerizaiton",
+                    value=True,
+                    key="release_target_toggle"
+                )
 
             # let user pick between prebuilt TEV-protease construct or custom
             custom_protease = st.toggle(
@@ -884,17 +912,18 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
             )
 
         # tmd overview
-        st.divider()
-        st.subheader("TMD Overview")
+        if state.transmembrane_mesa:
+            st.divider()
+            st.subheader("TMD Overview")
 
-        for chain_id in state.highlight_selection:
-            st.markdown(f"#### {chain_id} TMD")
-            st.code(
-                state.tmds[f"{chain_id}_tmd"],
-                language="text",
-                wrap_lines=True,
-                height="content"
-            )
+            for chain_id in state.highlight_selection:
+                st.markdown(f"#### {chain_id} TMD")
+                st.code(
+                    state.tmds[f"{chain_id}_tmd"],
+                    language="text",
+                    wrap_lines=True,
+                    height="content"
+                )
 
         # icd overview
         st.divider()
@@ -972,8 +1001,7 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
     download_container = st.container(border=True)
     with download_container:
         # assemble annotated constructs
-        construct_list: dict[str, list[str |
-                                       tuple[str, str] | tuple[str, str, str]]] = {}
+        construct_list: dict[str, list[str | tuple[str, str] | tuple[str, str, str]]] = {}
         for chain_id in state.highlight_selection:
             for chain_data in state.current_pdb_chains_data:
                 if chain_data["chain_id"] != chain_id:
@@ -982,35 +1010,53 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
                 current_chain: list[str | tuple[str, str] | tuple[str, str, str]] = [
                     (chain_data["sequence"], "Binder", "#534cb3"),
                     (state.linkers[f"{chain_id}_linker"], "Linker", "#eba814"),
-                    (state.tmds[f"{chain_id}_tmd"], "TMD", "#69ad52"),
                 ]
 
-                # selectively append target and protease
-                if chain_id in state.target_chain_association:
-                    construct_list[f"{chain_id}_Target"] = ([f"> {chain_id}_Target\n\n"] + current_chain + [(PRS_DATA[state.prs_selection][1]
-                                                            if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b"), (state.target_sequence, "Target", "#bd4258")])
+                if state.transmembrane_mesa:
+                    current_chain.append((state.tmds[f"{chain_id}_tmd"], "TMD", "#69ad52"))
 
+                # selectively append target and protease
+                #if chain_id in state.target_chain_association:
+                #    construct_list[f"{chain_id}_Target"] = ([f"> {chain_id}_Target\n\n"] + current_chain + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b"), (state.target_sequence, "Target", "#bd4258")])
+
+                # separate chain design / split protease design
                 if state.split_protease_toggle:
                     if chain_id in state.protease_chain_association["n"]:
-                        construct_list[f"{chain_id}_N-Term Protease"] = ([f"> {chain_id}_N-Term Protease\n\n"] + current_chain + [(
-                            NTEV_DATA[state.n_protease_selection][1] if not state.custom_protease_toggle else state.n_protease_sequence_entry, "N-Term Protease", "#bfbd40")])
+                        construct_list[f"{chain_id}_N-Term Protease"] = ([f"> {chain_id}_N-Term Protease{'_TARGET' if chain_id in state.target_chain_association else ''}\n\n"]
+                                                                         + current_chain
+                                                                         + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if state.release_protease_toggle else ""]
+                                                                         + [(NTEV_DATA[state.n_protease_selection][1] if not state.custom_protease_toggle else state.n_protease_sequence_entry, "N-Term Protease", "#bfbd40")]
+                                                                         + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.target_chain_association and state.release_target_toggle else ""]
+                                                                         + [(state.target_sequence, "Target", "#bd4258") if chain_id in state.target_chain_association else ""]
+                                                                         )
+
                         if chain_id in state.aip_chain_association:
                             construct_list[f"{chain_id}_N-Term Protease"].append(
                                 (AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
+
                     elif chain_id in state.protease_chain_association["c"]:
-                        construct_list[f"{chain_id}_C-Term Protease"] = ([f"> {chain_id}_C-Term Protease\n\n"] + current_chain + [(
-                            CTEV_DATA[state.c_protease_selection][1] if not state.custom_protease_toggle else state.c_protease_sequence_entry, "C-Term Protease", "#3948c6")])
+                        construct_list[f"{chain_id}_C-Term Protease"] = ([f"> {chain_id}_C-Term Protease{'_TARGET' if chain_id in state.target_chain_association else ''}\n\n"]
+                                                                         + current_chain
+                                                                         + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if state.release_protease_toggle else ""]
+                                                                         + [(CTEV_DATA[state.c_protease_selection][1] if not state.custom_protease_toggle else state.c_protease_sequence_entry, "C-Term Protease", "#3948c6")]
+                                                                         + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.target_chain_association and state.release_target_toggle else ""]
+                                                                         + [(state.target_sequence, "Target", "#bd4258") if chain_id in state.target_chain_association else ""]
+                                                                         )
+
                         if chain_id in state.aip_chain_association:
                             construct_list[f"{chain_id}_C-Term Protease"].append(
                                 (AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
 
                 else:
                     if chain_id in state.protease_chain_association["complete"]:
-                        construct_list[f"{chain_id}_Protease"] = ([f"> {chain_id}_Protease\n\n"] + current_chain + [(
-                            TEVP_DATA[state.complete_protease_selection][1] if not state.custom_protease_toggle else state.custom_protease_sequence, "Protease", "#6b46b9")])
-                        if chain_id in state.aip_chain_association:
-                            construct_list[f"{chain_id}_Protease"].append(
-	                                (AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
+                        if chain_id in state.target_chain_association:
+                            construct_list[f"{chain_id}_Target"] = ([f"> {chain_id}_Target\n\n"] + current_chain + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b"), (state.target_sequence, "Target", "#bd4258")])
+                        else:
+                            construct_list[f"{chain_id}_Protease"] = ([f"> {chain_id}_Protease\n\n"] + current_chain + [(TEVP_DATA[state.complete_protease_selection][1] if not state.custom_protease_toggle else state.custom_protease_sequence, "Protease", "#6b46b9")])
+
+                            if chain_id in state.aip_chain_association:
+                                construct_list[f"{chain_id}_Protease"].append(
+                                    (AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
 
                 # create FRET sequences
                 if state.fret_chains_toggle:
