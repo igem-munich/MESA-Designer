@@ -255,13 +255,13 @@ if search_button:
 if state.sabdab is not None:
     if len(state.sabdab) > 0:
         st.subheader("Select Binder")
-        st.text("search took " + str(round(state.search_duration.total_seconds(), 2)) + " s")
+        st.text(str(len(state.sabdab)) + " results, search took " + str(round(state.search_duration.total_seconds(), 2)) + " s")
         selection = st.dataframe(state.sabdab, selection_mode="single-row", on_select="rerun")
         try:
             state["pdb_selection"] = state.sabdab.iloc[selection["selection"]["rows"]]["pdb"].to_numpy()[0]
         except:
             state["pdb_selection"] = 0
-        print(state["pdb_selection"])
+        print(state.pdbs)
     else:
         st.info("No targets were found")
 ### Display Found Binder Structures ####################################################################################

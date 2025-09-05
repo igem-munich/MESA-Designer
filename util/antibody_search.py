@@ -41,10 +41,10 @@ def search_antibodies(antigen: str, filter_structures: bool=True):
         if Path(str(FILES_DIR) + "/sabdab_structures/imgt/"+ pdb+".pdb").is_file():
             pdb_files[pdb] = [Path(str(FILES_DIR) + "/sabdab_structures/imgt/"+ pdb+".pdb")] 
         if pdb_files[pdb] == []:
-            if Path(str(FILES_DIR) + "/sabdab_structures/imgt/"+ pdb+".pdb").is_file():
+            if Path(str(FILES_DIR) + "/sabdab_structures/chothia/"+ pdb+".pdb").is_file():
                 pdb_files[pdb] = [Path(str(FILES_DIR) + "/sabdab_structures/chothia/"+ pdb+".pdb")] 
         if pdb_files[pdb] == []:
-            if Path(str(FILES_DIR) + "/sabdab_structures/imgt/"+ pdb+".pdb").is_file():
+            if Path(str(FILES_DIR) + "/sabdab_structures/raw/"+ pdb+".pdb").is_file():
                 pdb_files[pdb] = [Path(str(FILES_DIR) + "/sabdab_structures/raw/"+ pdb+".pdb")] 
         if pdb_files[pdb] == []:
             pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR)+"/skempi_structures")
