@@ -263,7 +263,10 @@ if state.sabdab is not None:
             state["pdb_selection"] = 0
         print(state.pdbs)
     else:
-        st.info("No targets were found")
+        st.info("""  
+        No targets were found  
+        Please check for synonymous names of your target and check again  
+        """)
 ### Display Found Binder Structures ####################################################################################
 # create new columns for displaying pdb structure
 if state.pdbs and state["pdb_selection"]:
