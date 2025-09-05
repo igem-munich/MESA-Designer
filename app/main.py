@@ -13,7 +13,7 @@ from streamlit_js_eval import streamlit_js_eval
 import py3Dmol
 from annotated_text import annotated_text
 from util.antibody_search import search_antibodies
-from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs, CHAIN_COLORS
+from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs, CHAIN_COLORS, SIGNAL_SEQS, TAG_SEQS
 from util.pdb_interaction import extract_chains_from_pdb
 import zipfile
 import io
@@ -244,7 +244,7 @@ if search_field and state.prev_search != search_field:
         state.prev_search = search_field
 
         # highlight cells containing search
-        state.sabdab_styled = state.sabdab.style.map(lambda v: "background-color: yellow" if str(v).__contains__(search_field) else "")
+        state.sabdab_styled = state.sabdab.style.map(lambda v: "background-color: yellow" if str(v).lower().__contains__(search_field.lower()) else "")
 
 if search_button:
     if search_field:
@@ -874,11 +874,10 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
                             if chain_id in state.aip_chain_association:
                                 state.aip_chain_association.remove(chain_id)
 
+                st.divider()
+
             else:
                 state.aip_chain_association.clear()
-
-            # options divider
-            st.divider()
 
         # automatically create FRET chains
         fret_chains_toggle = st.toggle(
@@ -888,6 +887,33 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
             help="Create FRET chains to test selected binders and TMDs"
         )
 
+        # add FLAG / 3xFLAG tag
+        flag_tag_toggle = st.toggle(
+            label="Prepend FLAG Tag",
+            value=False,
+            key="flag_tag_toggle",
+            help="Prepend (3x)FLAG Tag to Sequences"
+        )
+
+        if flag_tag_toggle:
+            flag_choice = st.radio(
+                label="FLAG / 3xFLAG",
+                options=[tag for tag in TAG_SEQS.keys() if tag.__contains__("FLAG")],
+                label_visibility="collapsed",
+                key="flag_choice"
+            )
+
+            st.divider()
+
+        # add HA tag
+        ha_tag_toggle = st.toggle(
+            label="Prepend HA Tag",
+            value=False,
+            key="ha_tag_toggle",
+            help="Prepend HA Tag to Sequences (Western Blot, Immunoprecipitation, etc.)"
+        )
+
+
 ### DOWNLOAD AND OVERVIEW ##############################################################################################
 if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
     st.divider()
@@ -896,6 +922,35 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
 
     with overview_container:
         # sections
+        # tags
+        if state.ha_tag_toggle:
+            st.subheader("HA Tag")
+            st.code(
+                TAG_SEQS["HA"][1],
+                language="text",
+                wrap_lines=True,
+                height="content"
+            )
+
+        if state.flag_tag_toggle:
+            st.subheader("FLAG Tag")
+            st.code(
+                TAG_SEQS[state.flag_choice][1],
+                language="text",
+                wrap_lines=True,
+                height="content"
+            )
+
+        # signal sequence
+        if state.transmembrane_mesa:
+            st.subheader("Signal Sequence")
+            st.code(
+                SIGNAL_SEQS["CD4"][1],
+                language="text",
+                wrap_lines=True,
+                height="content"
+            )
+
         # binder fasta display
         st.subheader("Binder Overview")
         st.code(
@@ -1016,12 +1071,13 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
                     continue
 
                 current_chain: list[str | tuple[str, str] | tuple[str, str, str]] = [
+                    (TAG_SEQS["HA"][1], "HA Tag", "#247FC3FF") if state.ha_tag_toggle else "",
+                    (TAG_SEQS[state.flag_choice][1], f"{state.flag_choice} Tag", "#BE2CD1FF") if state.flag_tag_toggle else "",
+                    (SIGNAL_SEQS["CD4"][1], "CD4 Signal Sequence", "#74C30EFF") if state.transmembrane_mesa else "",
                     (chain_data["sequence"], "Binder", "#534cb3"),
                     (state.linkers[f"{chain_id}_linker"], "Linker", "#eba814"),
+                    (state.tmds[f"{chain_id}_tmd"], "TMD", "#69ad52") if state.transmembrane_mesa else ""
                 ]
-
-                if state.transmembrane_mesa:
-                    current_chain.append((state.tmds[f"{chain_id}_tmd"], "TMD", "#69ad52"))
 
                 # selectively append target and protease
                 #if chain_id in state.target_chain_association:
