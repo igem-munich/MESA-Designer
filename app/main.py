@@ -243,11 +243,17 @@ if search_field and state.prev_search != search_field:
         state.sabdab, state.skempi, state.pdbs, state.search_duration = search_antibodies(search_field)
         state.prev_search = search_field
 
+        # highlight cells containing search
+        state.sabdab_styled = state.sabdab.style.map(lambda v: "background-color: yellow" if str(v).__contains__(search_field) else "")
+
 if search_button:
     if search_field:
         with st.spinner(f"Searching for: **{search_field}**"):
             state.sabdab, state.skempi, state.pdbs, state.search_duration = search_antibodies(search_field)
             state.prev_search = search_field
+
+            # highlight cells containing search
+            state.sabdab_styled = state.sabdab.style.map(lambda v: "background-color: yellow" if str(v).lower().__contains__(search_field.lower()) else "")
     
     else:
         st.error("Please enter a search query.")
@@ -256,12 +262,12 @@ if state.sabdab is not None:
     if len(state.sabdab) > 0:
         st.subheader("Select Binder")
         st.text(str(len(state.sabdab)) + " results, search took " + str(round(state.search_duration.total_seconds(), 2)) + " s")
-        selection = st.dataframe(state.sabdab, selection_mode="single-row", on_select="rerun")
+        selection = st.dataframe(state.sabdab_styled, selection_mode="single-row", on_select="rerun")
         try:
             state["pdb_selection"] = state.sabdab.iloc[selection["selection"]["rows"]]["pdb"].to_numpy()[0]
         except:
             state["pdb_selection"] = 0
-        print(state.pdbs)
+        #print(state.pdbs)
     else:
         st.info("""  
         No targets were found  
@@ -392,7 +398,6 @@ if state.pdbs and state["pdb_selection"]:
         state.binder_fasta = fasta
 
 ### Build linker between Binder and TMD ################################################################################
-# TODO OPTIONAL: more options for linker building
 if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
     st.divider()
     st.header("Linker Design")
