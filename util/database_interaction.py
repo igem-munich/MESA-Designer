@@ -85,7 +85,7 @@ def get_dataframe(conn: sqlite3.Connection, table_name: str):
     return df
 
 def get_pdbs(pdb_id: str, directory: str):
-    files = [file for file in pathlib.Path(directory).rglob("*.pdb") if str(file).__contains__(pdb_id)]
+    files = [file for file in pathlib.Path(directory).rglob(f"{pdb_id}*.pdb")]
     return files
 
 def search_antigen(conn: sqlite3.Connection, antigen_name: str):

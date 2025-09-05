@@ -223,7 +223,6 @@ if state.themes["refreshed"] == False:
 
 st.set_page_config(page_title="MESA-Designer", layout="wide", page_icon="🧬")
 page_width = streamlit_js_eval(js_expressions="window.innerWidth", key="WIDTH", want_output=True)
-print(page_width)
 
 ### Target Search Field ################################################################################################
 # columns for search field and search button
@@ -241,13 +240,13 @@ with col2:
 # search database and display options
 if search_field and state.prev_search != search_field:
     with st.spinner(f"Searching for: **{search_field}**"):
-        state.sabdab, state.skempi, state.pdbs = search_antibodies(search_field)
+        state.sabdab, state.skempi, state.pdbs, state.search_duration = search_antibodies(search_field)
         state.prev_search = search_field
 
 if search_button:
     if search_field:
         with st.spinner(f"Searching for: **{search_field}**"):
-            state.sabdab, state.skempi, state.pdbs = search_antibodies(search_field)
+            state.sabdab, state.skempi, state.pdbs, state.search_duration = search_antibodies(search_field)
             state.prev_search = search_field
     
     else:
@@ -256,12 +255,13 @@ if search_button:
 if state.sabdab is not None:
     if len(state.sabdab) > 0:
         st.subheader("Select Binder")
+        st.text("search took " + str(round(state.search_duration.total_seconds(), 2)) + " s")
         selection = st.dataframe(state.sabdab, selection_mode="single-row", on_select="rerun")
         try:
             state["pdb_selection"] = state.sabdab.iloc[selection["selection"]["rows"]]["pdb"].to_numpy()[0]
         except:
             state["pdb_selection"] = 0
-
+        print(state["pdb_selection"])
     else:
         st.info("No targets were found")
 ### Display Found Binder Structures ####################################################################################

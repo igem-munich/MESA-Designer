@@ -34,17 +34,29 @@ def search_antibodies(antigen: str, filter_structures: bool=True):
 
     for _, row in sabdab_selection.iterrows():
         pdb = row["pdb"]
+        
+        # retrieve pdb files
+        pdb_files[pdb] = []
+        pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR)+"/abdb_structures/chothia")
+        if pdb_files[pdb] == []:
+            pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR)+"/skempi_structures")
+        if pdb_files[pdb] == []:
+            pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR)+"/sabdab_structures")
+        
+        if(len(pdb_files[pdb]) == 0):
+            pdb_files[pdb] = ""
+            continue
+        pdb_files[pdb] = pdb_files[pdb][0]
+
         if pdb not in skempi_pdbs:
             continue
+        
         # retrieve skempi data
         sel = skempi_df.loc[skempi_df["#Pdb"].str[:5]==pdb]
         skempi_selection[pdb] = sel if len(sel) > 0 else None
 
-        # retrieve pdb files
-        pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR))
-
-    if filter_structures:
-        for key in pdb_files:
-            pdb_files[key] = get_highest_priority_path(pdb_files[key], file_priority_list)
-    print(datetime.datetime.now()-time)
-    return sabdab_selection, skempi_selection, pdb_files
+        
+#    if filter_structures:
+#        for key in pdb_files:
+#            pdb_files[key] = get_highest_priority_path(pdb_files[key], file_priority_list)
+    return sabdab_selection, skempi_selection, pdb_files, datetime.datetime.now()-time
