@@ -256,12 +256,17 @@ if state.sabdab is not None:
     if len(state.sabdab) > 0:
         st.subheader("Select Binder")
         st.text(str(len(state.sabdab)) + " results, search took " + str(round(state.search_duration.total_seconds(), 2)) + " s")
-        selection = st.dataframe(state.sabdab, selection_mode="single-row", on_select="rerun")
+        selection = st.dataframe(state.sabdab, selection_mode="single-row", on_select="rerun", column_config={
+            "date": st.column_config.DateColumn(format="YYYY MMM"),
+            "resolution": st.column_config.ProgressColumn(format="%f", max_value=5.0),
+            "organism": None,
+            "heavy_species": None,
+            "light_species": None
+        },hide_index=True,)
         try:
             state["pdb_selection"] = state.sabdab.iloc[selection["selection"]["rows"]]["pdb"].to_numpy()[0]
         except:
             state["pdb_selection"] = 0
-        print(state.pdbs)
     else:
         st.info("No targets were found")
 ### Display Found Binder Structures ####################################################################################
