@@ -1045,13 +1045,16 @@ if state.pdbs and len(state.highlight_selection) > 0 and state.pdb_selection:
                 if chain_data["chain_id"] != chain_id:
                     continue
 
+                # base chains
                 current_chain: list[str | tuple[str, str] | tuple[str, str, str]] = [
                     (SIGNAL_SEQS["CD4"][1], "CD4 Signal Sequence", "#74C30EFF") if state.transmembrane_mesa else "",
                     (chain_data["sequence"], "Binder", "#534cb3"),
                     (state.linkers[f"{chain_id}_linker"], "Linker", "#eba814"),
-                    (state.tmds[f"{chain_id}_tmd"], "TMD", "#69ad52") if state.transmembrane_mesa else ""
+                    (state.tmds[f"{chain_id}_tmd"], "TMD", "#69ad52") if state.transmembrane_mesa else "",
+                    "GGGSGGGS" if state.transmembrane_mesa else "",
                 ]
 
+                # insert tags
                 if state.tag_toggle:
                     for tag in [tag for tag in state.tag_chain_association[chain_id] if state.tag_chain_association[chain_id][tag]]:
                         current_chain.insert(1, (TAG_SEQS[tag][1], f"{tag} Tag", "#26B771FF"))
@@ -1062,38 +1065,50 @@ if state.pdbs and len(state.highlight_selection) > 0 and state.pdb_selection:
                         construct_list[f"{chain_id}_N-Term Protease"] = ([f"> {chain_id}_N-Term Protease{'_CARGO' if chain_id in state.cargo_chain_association else ''}\n\n"]
                                                                          + current_chain
                                                                          + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if state.release_protease_toggle else ""]
+                                                                         + ["GGGSGGGS" if state.release_protease_toggle else ""]
                                                                          + [(NTEV_DATA[state.n_protease_selection][1] if not state.custom_protease_toggle else state.n_protease_sequence_entry, "N-Term Protease", "#bfbd40")]
+                                                                         + ["GGGSGGGS" if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
                                                                          + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
+                                                                         + ["GGGSGGGS" if chain_id in state.cargo_chain_association else ""]
                                                                          + [(state.cargo_sequence, "Cargo", "#bd4258") if chain_id in state.cargo_chain_association else ""]
                                                                          )
 
                         if chain_id in state.aip_chain_association:
-                            construct_list[f"{chain_id}_N-Term Protease"].append(
-                                (AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
+                            construct_list[f"{chain_id}_N-Term Protease"].append("GGGSGGGS")
+                            construct_list[f"{chain_id}_N-Term Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
 
                     elif chain_id in state.protease_chain_association["c"]:
                         construct_list[f"{chain_id}_C-Term Protease"] = ([f"> {chain_id}_C-Term Protease{'_CARGO' if chain_id in state.cargo_chain_association else ''}\n\n"]
                                                                          + current_chain
                                                                          + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if state.release_protease_toggle else ""]
+                                                                         + ["GGGSGGGS" if state.release_protease_toggle else ""]
                                                                          + [(CTEV_DATA[state.c_protease_selection][1] if not state.custom_protease_toggle else state.c_protease_sequence_entry, "C-Term Protease", "#3948c6")]
+                                                                         + ["GGGSGGGS" if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
                                                                          + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
+                                                                         + ["GGGSGGGS" if chain_id in state.cargo_chain_association else ""]
                                                                          + [(state.cargo_sequence, "Cargo", "#bd4258") if chain_id in state.cargo_chain_association else ""]
                                                                          )
 
                         if chain_id in state.aip_chain_association:
-                            construct_list[f"{chain_id}_C-Term Protease"].append(
-                                (AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
+                            construct_list[f"{chain_id}_C-Term Protease"].append("GGGSGGGS")
+                            construct_list[f"{chain_id}_C-Term Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
 
                 else:
                     if chain_id in state.protease_chain_association["complete"]:
                         if chain_id in state.cargo_chain_association:
-                            construct_list[f"{chain_id}_Cargo"] = ([f"> {chain_id}_Cargo\n\n"] + current_chain + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b"), (state.cargo_sequence, "Cargo", "#bd4258")])
+                            construct_list[f"{chain_id}_Cargo"] = ([f"> {chain_id}_Cargo\n\n"]
+                                                                   + current_chain
+                                                                   + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b"),
+                                                                      "GGGSGGGS",
+                                                                      (state.cargo_sequence, "Cargo", "#bd4258")])
                         else:
-                            construct_list[f"{chain_id}_Protease"] = ([f"> {chain_id}_Protease\n\n"] + current_chain + [(TEVP_DATA[state.complete_protease_selection][1] if not state.custom_protease_toggle else state.custom_protease_sequence, "Protease", "#6b46b9")])
+                            construct_list[f"{chain_id}_Protease"] = ([f"> {chain_id}_Protease\n\n"]
+                                                                      + current_chain
+                                                                      + [(TEVP_DATA[state.complete_protease_selection][1] if not state.custom_protease_toggle else state.custom_protease_sequence, "Protease", "#6b46b9")])
 
                             if chain_id in state.aip_chain_association:
-                                construct_list[f"{chain_id}_Protease"].append(
-                                    (AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
+                                construct_list[f"{chain_id}_Protease"].append("GGGSGGGS")
+                                construct_list[f"{chain_id}_Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
 
                 # create FRET sequences
                 if state.fret_chains_toggle:
