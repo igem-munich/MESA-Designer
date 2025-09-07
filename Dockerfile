@@ -1,20 +1,17 @@
-FROM ubuntu:24.04
+FROM python:3.12-slim
 LABEL authors="Aeneas Tews"
 
 WORKDIR /mesa_designer
 
 RUN apt-get update && apt-get install -y \
     build-essential \
-    software-properties-common \
-    python3.12 \
-    python3-pip \
     curl \
     git \
     && rm -rf /var/lib/apt/lists/*
 
 RUN git clone https://github.com/igem-munich/MESA-Designer.git .
 
-RUN pip install -r requirements.txt --break-system-packages
+RUN pip install -r requirements.txt
 
 RUN python3 ./setup.py
 
