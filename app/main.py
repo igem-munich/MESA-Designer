@@ -14,7 +14,7 @@ import py3Dmol
 from annotated_text import annotated_text
 from util.antibody_search import search_antibodies
 from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs, CHAIN_COLORS, SIGNAL_SEQS, TAG_SEQS
-from util.pdb_interaction import extract_chains_from_pdb
+from util.pdb_interaction import extract_chains_from_pdb, get_pdb_from_rcsb
 import zipfile
 import io
 import json
@@ -86,18 +86,18 @@ if "themes" not in state:
     for key, value in state.themes["dark"].items():
         if key.startswith("theme"):
             st._config.set_option(key, value)
+if "current_pdb" not in state:
+    state.current_pdb = ""
 
 def update_chain_highlight_selection(chain_id_to_toggle: str, current_pdb_selection: str) -> None:
     # Access the actual state of the specific checkbox that was changed
     checkbox_key: str = f"{current_pdb_selection}_checkbox_chain_{chain_id_to_toggle}"
-    pdb_chain_data: list[dict] = extract_chains_from_pdb(state.pdbs[current_pdb_selection])
-    lengths = {chain_data["chain_id"]: len(
-        chain_data["sequence"]) for chain_data in pdb_chain_data}
+    pdb_chain_data: list[dict] = extract_chains_from_pdb(file_content=state.current_pdb)
+    lengths = {chain_data["chain_id"]: len(chain_data["sequence"]) for chain_data in pdb_chain_data}
 
     if state[checkbox_key]:  # If the checkbox is now checked
         if chain_id_to_toggle not in state.highlight_selection:
-            state.highlight_selection[chain_id_to_toggle] = list(
-                range(1, lengths[chain_id_to_toggle] + 1))
+            state.highlight_selection[chain_id_to_toggle] = list(range(1, lengths[chain_id_to_toggle] + 1))
     else:  # If the checkbox is now unchecked
         if chain_id_to_toggle in state.highlight_selection:
             del state.highlight_selection[chain_id_to_toggle]
@@ -108,8 +108,7 @@ def update_chain_highlight_selection_residues(chain_id_to_change: str, current_p
 
     if chain_id_to_change in state.highlight_selection.keys():
         select_from, select_to = state[input_key].split(":")
-        state.highlight_selection[chain_id_to_change] = list(
-            range(int(select_from), int(select_to) + 1))
+        state.highlight_selection[chain_id_to_change] = list(range(int(select_from), int(select_to) + 1))
 
 
 def update_split_protease_value() -> None:
@@ -141,32 +140,9 @@ def generate_download() -> None:
             zf.writestr(file_name, text)
 
         # add PDB structures
-        if state["download_sel_pdb"] and state.pdbs and state.prev_pdb_selection:
-            selected_pdb_path = state.pdbs.get(state.prev_pdb_selection)
-
-            if selected_pdb_path and Path(selected_pdb_path).exists():
-                pdb_file_name = Path(selected_pdb_path).name
-
-                try:
-                    with open(selected_pdb_path, "rb") as f:
-                        # Put in subfolder
-                        zf.writestr(f"selected_pdb/{pdb_file_name}", f.read())
-                except Exception as e:
-                    st.warning(
-                        f"Could not add selected PDB '{pdb_file_name}' to zip: {e}")
-
-        if state["download_all_pdb"] and state.pdbs:
-            for pdb_id, pdb_path in state.pdbs.items():
-                if pdb_path and Path(pdb_path).exists():
-                    pdb_file_name = Path(pdb_path).name
-
-                    try:
-                        with open(pdb_path, "rb") as f:
-                            # Put in subfolder
-                            zf.writestr(f"all_pdbs/{pdb_file_name}", f.read())
-                    except Exception as e:
-                        st.warning(
-                            f"Could not add PDB '{pdb_file_name}' to zip: {e}")
+        if state.download_sel_pdb and state.pdbs and state.pdb_selection:
+            # Put in subfolder
+            zf.writestr(f"selected_pdb/{state.pdb_selection}.pdb", state.current_pdb)
 
         # add additional data
         if state["download_additional"]:  # Use the new checkbox key
@@ -240,25 +216,16 @@ with col2:
                               icon=":material/search:", width=45)
 
 # search database and display options
-if search_field and state.prev_search != search_field:
+if search_button or (search_field and state.prev_search != search_field):
+    if not search_field:
+        st.error("Please enter a search query")
+
     with st.spinner(f"Searching for: **{search_field}**"):
         state.sabdab, state.skempi, state.pdbs, state.search_duration = search_antibodies(search_field)
         state.prev_search = search_field
 
         # highlight cells containing search
         state.sabdab_styled = state.sabdab.style.map(lambda v: "background-color: yellow" if str(v).lower().__contains__(search_field.lower()) else "")
-
-if search_button:
-    if search_field:
-        with st.spinner(f"Searching for: **{search_field}**"):
-            state.sabdab, state.skempi, state.pdbs, state.search_duration = search_antibodies(search_field)
-            state.prev_search = search_field
-
-            # highlight cells containing search
-            state.sabdab_styled = state.sabdab.style.map(lambda v: "background-color: yellow" if str(v).lower().__contains__(search_field.lower()) else "")
-    
-    else:
-        st.error("Please enter a search query.")
 
 if state.sabdab is not None:
     if len(state.sabdab) > 0:
@@ -270,19 +237,24 @@ if state.sabdab is not None:
             "organism": None,
             "heavy_species": None,
             "light_species": None
-        },hide_index=True,)
+        },hide_index=True)
         try:
-            state["pdb_selection"] = state.sabdab.iloc[selection["selection"]["rows"]]["pdb"].to_numpy()[0]
+            state.pdb_selection = state.sabdab.iloc[selection["selection"]["rows"]]["pdb"].to_numpy()[0]
+            state.current_pdb = get_pdb_from_rcsb(state.pdb_selection)
         except:
             state["pdb_selection"] = 0
+            state.pdb_selection = None
+            state.current_pdb = ""
+
     else:
         st.info("""  
         No targets were found  
         Please check for synonymous names of your target and check again  
         """)
+
 ### Display Found Binder Structures ####################################################################################
 # create new columns for displaying pdb structure
-if state.pdbs and state["pdb_selection"]:
+if state.pdbs and state.pdb_selection:
     st.header("Inspect Structures")
     pdb_cols = st.columns([0.2, 1, 0.2])
 
@@ -290,19 +262,19 @@ if state.pdbs and state["pdb_selection"]:
     with pdb_cols[0]:
         prev_pdb_selection = None
         # Re-extract chains and reset selection if PDB selection changes
-        if  isinstance(state["pdb_selection"], str):
+        if  state.pdb_selection:
 
-            state.current_pdb_chains_data = extract_chains_from_pdb(
-                state.pdbs[state["pdb_selection"]])
+            state.current_pdb_chains_data = extract_chains_from_pdb(file_content=state.current_pdb)
 
             # generate color for every chain
             state.chain_colors = {}
             for chain_data in state.current_pdb_chains_data:
                 state.chain_colors[chain_data["chain_id"]] = list(state.chain_colors.values())
-            prev_pdb_selection = state["pdb_selection"]
-        elif isinstance(prev_pdb_selection, str):
-            state["pdb_selection"] = prev_pdb_selection
-            # Chain selection
+            prev_pdb_selection = state.pdb_selection
+        elif prev_pdb_selection:
+            state.pdb_selection = prev_pdb_selection
+
+        # Chain selection
         st.subheader("Select Chains")
         # Create checkboxes for each chain
         for chain_info in state.current_pdb_chains_data:
@@ -314,20 +286,20 @@ if state.pdbs and state["pdb_selection"]:
             with col_pdb_selection_left:
                 st.checkbox(
                     f"Chain {chain_id}",
-                    key=f"{state["pdb_selection"]}_checkbox_chain_{chain_id}",
+                    key=f"{state.pdb_selection}_checkbox_chain_{chain_id}",
                     value=(chain_id in state.highlight_selection.keys()),
                     on_change=update_chain_highlight_selection,
-                    args=(chain_id, state["pdb_selection"])
+                    args=(chain_id, state.pdb_selection)
                 )
             with col_pdb_selection_right:
-                checkbox_key = f"{state["pdb_selection"]}_checkbox_chain_{chain_id}"
+                checkbox_key = f"{state.pdb_selection}_checkbox_chain_{chain_id}"
                 if state[checkbox_key]:
                     st.text_input(
                         f"Residues in Chain {chain_id}",
-                        key=f"{state["pdb_selection"]}_residue_input_chain_{chain_id}",
+                        key=f"{state.pdb_selection}_residue_input_chain_{chain_id}",
                         value=f"{state.highlight_selection[chain_id][0]}:{state.highlight_selection[chain_id][-1]}",
                         on_change=update_chain_highlight_selection_residues,
-                        args=(chain_id, state["pdb_selection"]),
+                        args=(chain_id, state.pdb_selection),
                         label_visibility="collapsed"
                     )
 
@@ -342,13 +314,12 @@ if state.pdbs and state["pdb_selection"]:
 
     with pdb_cols[1]:
         # display selected residues using py3dmol
-        with open(state.pdbs[state["pdb_selection"]], "r") as f:
-            # create py3Dmol view
-            view = py3Dmol.view(width=page_width, height=500)
-            view.setBackgroundColor(state.themes[state.themes["current_theme"]]["theme.backgroundColor"])
+        # create py3Dmol view
+        view = py3Dmol.view(width=page_width, height=500)
+        view.setBackgroundColor(state.themes[state.themes["current_theme"]]["theme.backgroundColor"])
 
-            # add protein model in cartoon view
-            add_model(view, xyz=f.read(), model_style=display_style)
+        # add protein model in cartoon view
+        add_model(view, xyz=state.current_pdb, model_style=display_style)
 
         # set viewstyle based on selection
         for chain_id in state.highlight_selection.keys():
@@ -379,7 +350,7 @@ if state.pdbs and state["pdb_selection"]:
         fasta = ""
 
         # get data
-        pdb_data = extract_chains_from_pdb(state.pdbs[state["pdb_selection"]])
+        pdb_data = extract_chains_from_pdb(file_content=state.current_pdb)
 
         # iterate through pdb entries and add selected chains/residues to fasta string
         for chain_data in pdb_data:
@@ -405,7 +376,7 @@ if state.pdbs and state["pdb_selection"]:
         state.binder_fasta = fasta
 
 ### Build linker between Binder and TMD ################################################################################
-if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
+if state.pdbs and len(state.highlight_selection) > 0 and state.pdb_selection:
     st.divider()
     st.header("Linker Design")
 
@@ -456,7 +427,7 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
         )
 
 ### TMD picker #########################################################################################################
-if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
+if state.pdbs and len(state.highlight_selection) > 0 and state.pdb_selection:
     st.divider()
     # transmembran/intracellular mesa
     st.toggle(
@@ -498,7 +469,7 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
         state.tmds.clear()
 
 ### INTRACELLULAR PART DESIGNER ########################################################################################
-if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
+if state.pdbs and len(state.highlight_selection) > 0 and state.pdb_selection:
     st.divider()
     st.header("Intracellular Component")
 
@@ -702,8 +673,7 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
                         )
 
                     st.markdown("##### Append to Chain")
-                    protease_association_cols = st.columns(
-                        len(state.highlight_selection))
+                    protease_association_cols = st.columns(len(state.highlight_selection))
                     for col, chain_id in zip(protease_association_cols, state.highlight_selection):
                         with col:
                             checkbox = st.checkbox(
@@ -926,7 +896,7 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
             state.tag_chain_association = {}
 
 ### DOWNLOAD AND OVERVIEW ##############################################################################################
-if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
+if state.pdbs and len(state.highlight_selection) > 0 and state.pdb_selection:
     st.divider()
     st.header("Component Overview")
     overview_container = st.container(border=True)
@@ -1082,8 +1052,9 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
                     (state.tmds[f"{chain_id}_tmd"], "TMD", "#69ad52") if state.transmembrane_mesa else ""
                 ]
 
-                for tag in [tag for tag in state.tag_chain_association[chain_id] if state.tag_chain_association[chain_id][tag]]:
-                    current_chain.insert(1, (TAG_SEQS[tag][1], f"{tag} Tag", "#26B771FF"))
+                if state.tag_toggle:
+                    for tag in [tag for tag in state.tag_chain_association[chain_id] if state.tag_chain_association[chain_id][tag]]:
+                        current_chain.insert(1, (TAG_SEQS[tag][1], f"{tag} Tag", "#26B771FF"))
 
                 # selectively append target and protease
                 #if chain_id in state.target_chain_association:
@@ -1167,12 +1138,6 @@ if state.pdbs and len(state.highlight_selection) > 0 and state["pdb_selection"]:
                     label="Include PDB Structure",
                     value=True,
                     key="download_sel_pdb"
-                )
-
-                st.checkbox(
-                    label="Include all PDB Structures",
-                    value=False,
-                    key="download_all_pdb"
                 )
 
             with additional_cols[1]:

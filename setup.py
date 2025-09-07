@@ -47,9 +47,14 @@ if Path("./files/done.txt").exists():
     print("Files already downloaded!\nIf you wish to re-download, please remove '/files/done.txt'")
     exit()
 
+# online mode
+offline_mode = False # input("Would you like to use this offline? Note: requires 55GB download
+
 # create dictionaries for databases
 Path.mkdir(Path("./data"))
-Path.mkdir(Path("./files"))
+
+if offline_mode:
+    Path.mkdir(Path("./files"))
 
 # Section for downloading the SABDAB database and setting up its SQLite database
 print("Downloading sabdab database and creating sqlite database...")
@@ -69,34 +74,35 @@ insert_data(conn, data, "main")
 conn.close()
 print("Successfully created sabdab sqlite3 database")
 
-# download pdb files from skempi database
-print("Downloading SKEMPI structures...")
-if not download_file("https://life.bsc.es/pid/skempi2/database/download/SKEMPI2_PDBs.tgz", "./files/skempi_pdbs.tgz"):
-    print("Failed to download skempi structures! Exiting!")
-    exit(1)
+if offline_mode:
+    # download pdb files from skempi database
+    print("Downloading SKEMPI structures...")
+    if not download_file("https://life.bsc.es/pid/skempi2/database/download/SKEMPI2_PDBs.tgz", "./files/skempi_pdbs.tgz"):
+        print("Failed to download skempi structures! Exiting!")
+        exit(1)
 
-# extract tar archive and move files to correct directory
-print("Extracting archive...")
-with tarfile.open("./files/skempi_pdbs.tgz", "r") as f:
-    Path.mkdir(Path("./files/skempi_structures_tmp"), exist_ok=True)
-    f.extractall("./files/skempi_structures_tmp")
+    # extract tar archive and move files to correct directory
+    print("Extracting archive...")
+    with tarfile.open("./files/skempi_pdbs.tgz", "r") as f:
+        Path.mkdir(Path("./files/skempi_structures_tmp"), exist_ok=True)
+        f.extractall("./files/skempi_structures_tmp")
 
-# move pdb files to correct location
-skempi_dir: Path = Path("./files/skempi_structures_tmp/PDBs")
-shutil.move(skempi_dir, skempi_dir.parent.parent)
-shutil.rmtree(skempi_dir.parent)
-os.rename(Path("./files/PDBs"), Path("./files/skempi_structures"))
+    # move pdb files to correct location
+    skempi_dir: Path = Path("./files/skempi_structures_tmp/PDBs")
+    shutil.move(skempi_dir, skempi_dir.parent.parent)
+    shutil.rmtree(skempi_dir.parent)
+    os.rename(Path("./files/PDBs"), Path("./files/skempi_structures"))
 
-# remove all files which start with ._
-for path in Path("./files/skempi_structures").glob("._*"):
-    os.remove(path)
+    # remove all files which start with ._
+    for path in Path("./files/skempi_structures").glob("._*"):
+        os.remove(path)
 
-# rename pdb files to be in line with sabdab naming (entire database)
-for path in Path("./files/skempi_structures").glob("*"):
-    new_path = path.with_name(path.name.lower())
-    os.rename(path, new_path)
+    # rename pdb files to be in line with sabdab naming (entire database)
+    for path in Path("./files/skempi_structures").glob("*"):
+        new_path = path.with_name(path.name.lower())
+        os.rename(path, new_path)
 
-print("Successfully downloaded skempi pdb files!")
+    print("Successfully downloaded skempi pdb files!")
 
 # download skempi protein-protein affinity data and insert it into sqlite database
 print("Downloading skempi affinity data...")
@@ -112,56 +118,58 @@ create_table_from_header(conn, skempi_header, "skempi")
 insert_data(conn, skempi_data, "skempi")
 print("Successfully inserted skempi data into database!")
 
-# download the pdb files from abYbank's antibody database
-print("Downloading abYbank Antibody DB (abdb)...")
-if not download_file("http://www.abybank.org/abdb/snapshots/abdb_20240706.zip", "./files/abdb_pdbs.zip"):
-    print("Failed to download abdb structures! Exiting!")
-    exit(1)
+if offline_mode:
+    # download the pdb files from abYbank's antibody database
+    print("Downloading abYbank Antibody DB (abdb)...")
+    if not download_file("http://www.abybank.org/abdb/snapshots/abdb_20240706.zip", "./files/abdb_pdbs.zip"):
+        print("Failed to download abdb structures! Exiting!")
+        exit(1)
 
-# extract the tar archive and move files to the correct directory
-print("Extracting archive...")
-with zipfile.ZipFile("./files/abdb_pdbs.zip", "r") as f:
-    Path.mkdir(Path("./files/abdb_structures_tmp"), exist_ok=True)
-    f.extractall("./files/abdb_structures_tmp")
+    # extract the tar archive and move files to the correct directory
+    print("Extracting archive...")
+    with zipfile.ZipFile("./files/abdb_pdbs.zip", "r") as f:
+        Path.mkdir(Path("./files/abdb_structures_tmp"), exist_ok=True)
+        f.extractall("./files/abdb_structures_tmp")
 
-# move content of downloaded snapshot to parent directory
-# get folder containing the files
-# needs to be updated when abdb is done rebuilding their database
-abdb_dir: Path = Path("./files/abdb_structures_tmp/abdb_newdata_20240706")
-shutil.move(abdb_dir, abdb_dir.parent.parent)
-shutil.rmtree(abdb_dir.parent)
-os.rename(Path("./files/abdb_newdata_20240706"), Path("./files/abdb_structures"))
+    # move content of downloaded snapshot to parent directory
+    # get folder containing the files
+    # needs to be updated when abdb is done rebuilding their database
+    abdb_dir: Path = Path("./files/abdb_structures_tmp/abdb_newdata_20240706")
+    shutil.move(abdb_dir, abdb_dir.parent.parent)
+    shutil.rmtree(abdb_dir.parent)
+    os.rename(Path("./files/abdb_newdata_20240706"), Path("./files/abdb_structures"))
 
-# move chothia files to separate directory
-Path.mkdir(Path("./files/abdb_structures/chothia"))
-for path in Path("./files/abdb_structures").glob("*.cho"):
-    shutil.move(path, path.parent / "chothia")
+    # move chothia files to separate directory
+    Path.mkdir(Path("./files/abdb_structures/chothia"))
+    for path in Path("./files/abdb_structures").glob("*.cho"):
+        shutil.move(path, path.parent / "chothia")
 
-# rename pdb files to be in line with sabdab naming (only chothia numbering)
-for path in Path("./files/abdb_structures/chothia").glob("*.cho"):
-    new_path = path.with_name(path.name[3:-3] + "pdb")
-    os.rename(path, new_path)
+    # rename pdb files to be in line with sabdab naming (only chothia numbering)
+    for path in Path("./files/abdb_structures/chothia").glob("*.cho"):
+        new_path = path.with_name(path.name[3:-3] + "pdb")
+        os.rename(path, new_path)
 
-print("Successfully downloaded abdb pdb files!")
+    print("Successfully downloaded abdb pdb files!")
 
-# download sabdab pdb files and extract to correct location
-print("Downloading sabdab pdb files...")
-if not download_file("https://opig.stats.ox.ac.uk/webapps/sabdab-sabpred/sabdab/archive/all/", "./files/sabdab_structures.zip"):
-    print("Failed to download sabdab structures! Exiting!")
-    exit(1)
+if offline_mode:
+    # download sabdab pdb files and extract to correct location
+    print("Downloading sabdab pdb files...")
+    if not download_file("https://opig.stats.ox.ac.uk/webapps/sabdab-sabpred/sabdab/archive/all/", "./files/sabdab_structures.zip"):
+        print("Failed to download sabdab structures! Exiting!")
+        exit(1)
 
-# extract zip archive and move to correct location
-print("Extracting archive...")
-with zipfile.ZipFile("./files/sabdab_structures.zip", "r") as f:
-    Path.mkdir(Path("./files/sabdab_structures_tmp"), exist_ok=True)
-    f.extractall("./files/sabdab_structures_tmp")
+    # extract zip archive and move to correct location
+    print("Extracting archive...")
+    with zipfile.ZipFile("./files/sabdab_structures.zip", "r") as f:
+        Path.mkdir(Path("./files/sabdab_structures_tmp"), exist_ok=True)
+        f.extractall("./files/sabdab_structures_tmp")
 
-sabdab_dir: Path = Path("./files/sabdab_structures_tmp/all_structures")
-shutil.move(sabdab_dir, sabdab_dir.parent.parent)
-shutil.rmtree(sabdab_dir.parent)
-os.rename(Path("./files/all_structures"), Path("./files/sabdab_structures"))
+    sabdab_dir: Path = Path("./files/sabdab_structures_tmp/all_structures")
+    shutil.move(sabdab_dir, sabdab_dir.parent.parent)
+    shutil.rmtree(sabdab_dir.parent)
+    os.rename(Path("./files/all_structures"), Path("./files/sabdab_structures"))
 
-print("Successfully downloaded sabdab pdb files!")
+    print("Successfully downloaded sabdab pdb files!")
 
 print("Successfully setup databases!")
 
