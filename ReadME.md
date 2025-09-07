@@ -26,7 +26,7 @@ docker build -t mesa-designer .
  ```
 now tht the repository is build, run it
 ```bash
-dcoker run -p 8501:8501 mesa-designer 
+docker run -p 8501:8501 mesa-designer 
 ```
 ### Pulling image from dockerhub
 The MESA-Designer tool can now also be run as a docker container. Please find it [here](https://hub.docker.com/repository/docker/aeneastews/mesa-designer/general).
