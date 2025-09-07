@@ -12,7 +12,7 @@ Next clone the github repo using any method you want, but we recommend running t
 Next you will probably want to create a virtual environment. 
 This can be done by running: `python -m venv .venv` This will be used to cleanly install all required packages. This can be done by running `pip install -r requirements.txt` from the cloned github repo's main directory.
 
-As a final setup step you need to download all necessary structures and database files. This can be done by simply running the setup.py script: `python3 ./setup.py` from the main directory.
+As a final setup step you need to download all database files. This can be done by simply running the setup.py script: `python3 ./setup.py` from the main directory.
 
 To start the tool, please run `streamlit run ./app/main.py` from the main directory!
 
