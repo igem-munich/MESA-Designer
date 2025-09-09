@@ -481,30 +481,51 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
     )
 
     if state.transmembrane_mesa:
-        st.header("TMD Picker")
+        custom_tmd = st.toggle(
+            label="Custom TMD",
+            value=False,
+            key="custom_tmd_toggle",
+            help="Use a custom TMD sequence"
+        )
 
-        for chain_id in state.chain_sequences:
-            # update tmd state
-            if f"{chain_id}_tmd" not in state.tmds:
-                state.tmds[f"{chain_id}_tmd"] = ""
+        st.header("TMD Picker" if not custom_tmd else "Custom TMD")
 
-            st.subheader(f"{chain_id} TMD")
+        if not custom_tmd:
+            st.info("You can inform your TMD choice according to this [Paper](https://pubmed.ncbi.nlm.nih.gov/33392392/) and its [supplementary data](https://pmc.ncbi.nlm.nih.gov/articles/PMC7759213/#sup1).")
 
-            tmd_selection = st.radio(
-                label="tmd_selection",
-                options=TMD_DATA.keys(),
-                horizontal=True,
-                label_visibility="collapsed",
-                key=f"{chain_id}_tmd_selection"
-            )
-            st.code(
-                TMD_DATA[tmd_selection][1],
-                language="text",
-                height="content",
-                wrap_lines=True
-            )
+        tmd_sequence_cols = st.columns(len(state.chain_sequences))
 
-            state.tmds[f"{chain_id}_tmd"] = TMD_DATA[tmd_selection][1]
+        for i, chain_id in enumerate(state.chain_sequences):
+            with tmd_sequence_cols[i]:
+                # update tmd state
+                if f"{chain_id}_tmd" not in state.tmds:
+                    state.tmds[f"{chain_id}_tmd"] = ""
+
+                st.subheader(f"{chain_id} TMD")
+
+                if not custom_tmd:
+                    tmd_selection = st.radio(
+                        label="tmd_selection",
+                        options=TMD_DATA.keys(),
+                        horizontal=True,
+                        label_visibility="collapsed",
+                        key=f"{chain_id}_tmd_selection"
+                    )
+                    st.code(
+                        TMD_DATA[tmd_selection][1],
+                        language="text",
+                        height="content",
+                        wrap_lines=True
+                    )
+                else:
+                    tmd_sequence = st.text_input(
+                        label=f"Enter {chain_id} TMD",
+                        value="",
+                        max_chars=1000,
+                        key=f"{chain_id}_tmd_sequence"
+                    )
+
+            state.tmds[f"{chain_id}_tmd"] = TMD_DATA[state[f"{chain_id}_tmd_selection"]][1] if not custom_tmd else state[f"{chain_id}_tmd_sequence"]
 
     else:
         state.tmds.clear()
@@ -1072,6 +1093,7 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
 
         for chain_id in [chain_id for chain_id in state.chain_sequences if len(state.chain_sequences[chain_id]) > 0]:
             current_chain: list[str | tuple[str, str] | tuple[str, str, str]] = [
+                "M" if not state.transmembrane_mesa else "",
                 (SIGNAL_SEQS["CD4"][1], "CD4 Signal Sequence", "#74C30EFF") if state.transmembrane_mesa else "",
                 (state.chain_sequences[chain_id], "Binder", "#534cb3"),
                 (state.linkers[f"{chain_id}_linker"], "Linker", "#eba814"),
@@ -1081,7 +1103,7 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
 
             if state.tag_toggle:
                 for tag in [tag for tag in state.tag_chain_association[chain_id] if state.tag_chain_association[chain_id][tag]]:
-                    current_chain.insert(1, (TAG_SEQS[tag][1], f"{tag} Tag", "#26B771FF"))
+                    current_chain.insert(2, (TAG_SEQS[tag][1], f"{tag} Tag", "#26B771FF"))
 
             # separate chain design / split protease design
             if state.split_protease_toggle:
@@ -1095,11 +1117,13 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
                                                                      + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
                                                                      + ["GGGSGGGS" if chain_id in state.cargo_chain_association else ""]
                                                                      + [(state.cargo_sequence, "Cargo", "#bd4258") if chain_id in state.cargo_chain_association else ""]
+                                                                     + ["." if not chain_id in state.aip_chain_association else ""]
                                                                      )
 
                     if chain_id in state.aip_chain_association:
                         construct_list[f"{chain_id}_N-Term Protease"].append("GGGSGGGS")
                         construct_list[f"{chain_id}_N-Term Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
+                        construct_list[f"{chain_id}_N-Term Protease"].append(".")
 
                 elif chain_id in state.protease_chain_association["c"]:
                     construct_list[f"{chain_id}_C-Term Protease"] = ([f"> {chain_id}_C-Term Protease{'_CARGO' if chain_id in state.cargo_chain_association else ''}\n\n"]
@@ -1111,36 +1135,47 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
                                                                      + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
                                                                      + ["GGGSGGGS" if chain_id in state.cargo_chain_association else ""]
                                                                      + [(state.cargo_sequence, "Cargo", "#bd4258") if chain_id in state.cargo_chain_association else ""]
+                                                                     + ["." if not chain_id in state.aip_chain_association else ""]
                                                                      )
 
                     if chain_id in state.aip_chain_association:
                         construct_list[f"{chain_id}_C-Term Protease"].append("GGGSGGGS")
                         construct_list[f"{chain_id}_C-Term Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence,"AIP", "#5aa56b"))
+                        construct_list[f"{chain_id}_C-Term Protease"].append(".")
 
             else:
                 if chain_id in state.protease_chain_association["complete"]:
                     construct_list[f"{chain_id}_Protease"] = ([f"> {chain_id}_Protease\n\n"]
                                                               + current_chain
-                                                              + [(TEVP_DATA[state.complete_protease_selection][1] if not state.custom_protease_toggle else state.custom_protease_sequence, "Protease", "#6b46b9")])
+                                                              + [(TEVP_DATA[state.complete_protease_selection][1] if not state.custom_protease_toggle else state.custom_protease_sequence, "Protease", "#6b46b9")]
+                                                              + ["." if not chain_id in state.aip_chain_association else ""]
+                                                              )
 
                     if chain_id in state.aip_chain_association:
                         construct_list[f"{chain_id}_Protease"].append("GGGSGGGS")
                         construct_list[f"{chain_id}_Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
+                        construct_list[f"{chain_id}_Protease"].append(".")
+
                 elif chain_id in state.cargo_chain_association:
                     construct_list[f"{chain_id}_Cargo"] = ([f"> {chain_id}_Cargo\n\n"]
                                                            + current_chain
-                                                           + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b"), "GGGSGGGS", (state.cargo_sequence, "Cargo", "#bd4258")])
-
+                                                           + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b"), "GGGSGGGS", (state.cargo_sequence, "Cargo", "#bd4258")]
+                                                           + ["." if not chain_id in state.aip_chain_association else ""]
+                                                           )
 
             # create FRET sequences
             if state.fret_chains_toggle:
                 construct_list[f"{chain_id}_FRET_mVenus"] = ([f"> {chain_id}_FRET_mVenus\n\n"]
                                                              + current_chain
-                                                             + [(FRET_ICDs["mVenus"][1], "mVenus", "#43b6bc")])
+                                                             + [(FRET_ICDs["mVenus"][1], "mVenus", "#43b6bc")]
+                                                             + ["."]
+                                                             )
 
                 construct_list[f"{chain_id}_FRET_mCerulean"] = ([f"> {chain_id}_FRET_mCerulean\n\n"]
                                                                 + current_chain
-                                                                + [(FRET_ICDs["mCerulean"][1], "mCerulean", "#c43b81")])
+                                                                + [(FRET_ICDs["mCerulean"][1], "mCerulean", "#c43b81")]
+                                                                + ["."]
+                                                                )
 
         # store in state
         state.construct_list_formatted = construct_list
