@@ -1,0 +1,32 @@
+name: Default workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    if: ${{ github.event.head_commit.author.name != 'Server user' }}
+    uses: ./.github/workflows/sync.yml
+    secrets: inherit
+
+  detect:
+    needs: sync
+    uses: ./.github/workflows/detect.yml
+    with:
+      files: |
+        Dockerfile
+        docker-compose.yml
+
+  rebuild:
+    needs: detect
+    if: needs.detect.outputs.critical == 'true'
+    uses: ./.github/workflows/rebuild.yml
+    secrets: inherit
+
+  restart:
+    needs: detect
+    if: needs.detect.outputs.critical == 'false'
+    uses: ./.github/workflows/restart.yml
+    secrets: inherit
