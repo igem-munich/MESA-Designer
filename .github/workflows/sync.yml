@@ -1,0 +1,31 @@
+name: Synchronize repository
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: "Name of the branch to synchronize."
+        required: false
+        default: main
+        type: string
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Name of the branch to synchronize."
+        required: false
+        default: main
+        type: string
+
+jobs:
+  sync:
+    runs-on: self-hosted
+    steps:
+      # Step 1: Synchronize repository
+      - name: Synchronize repository
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          port: ${{ secrets.PORT }}
+          key: ${{ secrets.KEY }}
+          script: git pull origin ${{ inputs.branch }}

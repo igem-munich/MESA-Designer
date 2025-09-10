@@ -1,0 +1,19 @@
+name: Docker restart
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  restart:
+    runs-on: self-hosted
+    steps:
+      # Step 1: Docker restart
+      - name: Docker restart
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          port: ${{ secrets.PORT }}
+          key: ${{ secrets.KEY }}
+          script: docker compose restart

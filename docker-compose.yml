@@ -1,0 +1,33 @@
+name: mesa-designer
+
+services:
+  mesa-designer:
+    build:
+        context: .
+        dockerfile: Dockerfile
+    image: mesa-designer
+    container_name: mesa-designer
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "1"
+    ports:
+      - "127.0.0.1:4010:8501"
+    networks:
+      - mesa-designer-network
+      - traefik-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mesa-designer.rule=Host(`mesa.igem-munich.com`)"
+      - "traefik.http.routers.mesa-designer.entrypoints=https"
+      - "traefik.http.routers.mesa-designer.tls=true"
+      - "traefik.http.routers.mesa-designer.tls.certresolver=cloudflare"
+
+networks:
+  mesa-designer-network:
+    name: mesa-designer-network
+  traefik-network:
+    name: traefik-network
+    external: true

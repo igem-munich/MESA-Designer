@@ -1,0 +1,43 @@
+name: Detect changes
+
+on:
+  workflow_call:
+    inputs:
+      files:
+        description: "A list of files to monitor for changes."
+        required: false
+        type: string
+    outputs:
+      changes:
+        description: "A list of all files that were changed."
+        value: ${{ jobs.detect.outputs.changes }}
+      critical:
+        description: "A boolean indicating if any specified files were changed."
+        value: ${{ jobs.detect.outputs.critical }}
+
+jobs:
+  detect:
+    runs-on: self-hosted
+    outputs:
+      changes: ${{ steps.all-changes.outputs.modified_files || steps.specific-changes.outputs.modified_files }}
+      critical: ${{ steps.specific-changes.outputs.any_modified || 'false' }}
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Step 2a: Detect all changes (when no files are provided)
+      - name: Detect all changes
+        id: all-changes
+        if: inputs.files == '' || inputs.files == null
+        uses: tj-actions/changed-files@v45
+
+      # Step 2b: Detect specific changes (when files are provided)
+      - name: Detect specific changes
+        id: specific-changes
+        if: inputs.files != '' && inputs.files != null
+        uses: tj-actions/changed-files@v45
+        with:
+          files: ${{ inputs.files }}
