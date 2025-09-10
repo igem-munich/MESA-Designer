@@ -318,7 +318,7 @@ if state.pdbs and state.pdb_selection:
     with pdb_cols[1]:
         # display selected residues using py3dmol
         # create py3Dmol view
-        view = py3Dmol.view(width=page_width, height=500)
+        view = py3Dmol.view(width=page_width*.71, height=500)
         view.setBackgroundColor(state.themes[state.themes["current_theme"]]["theme.backgroundColor"])
 
         # add protein model in cartoon view
