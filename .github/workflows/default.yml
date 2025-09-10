@@ -18,6 +18,7 @@ jobs:
       files: |
         Dockerfile
         docker-compose.yml
+        requirements.txt
 
   rebuild:
     needs: detect
