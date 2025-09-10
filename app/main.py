@@ -227,19 +227,20 @@ if search_button or (search_field and state.prev_search != search_field):
         state.sabdab, state.skempi, state.pdbs, state.search_duration = search_antibodies(search_field)
         state.prev_search = search_field
 
-        # highlight cells containing search
-        state.sabdab_styled = state.sabdab.style.map(lambda v: "background-color: yellow" if str(v).lower().__contains__(search_field.lower()) else "")
-
 if state.sabdab is not None:
     if len(state.sabdab) > 0:
         st.subheader("Select Binder")
         st.text(str(len(state.sabdab)) + " results, search took " + str(round(state.search_duration.total_seconds(), 2)) + " s")
-        selection = st.dataframe(state.sabdab_styled, selection_mode="single-row", on_select="rerun", column_config={
+        selection = st.dataframe(state.sabdab, selection_mode="single-row", on_select="rerun", column_config={
             "date": st.column_config.DateColumn(format="YYYY MMM"),
             "resolution": st.column_config.ProgressColumn(format="%f", max_value=5.0),
             "organism": None,
             "heavy_species": None,
-            "light_species": None
+            "light_species": None,
+            "model": None,
+            "antigen_chain": None,
+            "short_header": None,
+            
         },hide_index=True)
         try:
             state.pdb_selection = state.sabdab.iloc[selection["selection"]["rows"]]["pdb"].to_numpy()[0]
@@ -493,9 +494,9 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
         if not custom_tmd:
             st.info("You can inform your TMD choice according to this [Paper](https://pubmed.ncbi.nlm.nih.gov/33392392/) and its [supplementary data](https://pmc.ncbi.nlm.nih.gov/articles/PMC7759213/#sup1).")
 
-        tmd_sequence_cols = st.columns(len(state.chain_sequences))
+        tmd_sequence_cols = st.columns(len([chain_id for chain_id in state.chain_sequences if len(state.chain_sequences[chain_id]) > 0]))
 
-        for i, chain_id in enumerate(state.chain_sequences):
+        for i, chain_id in enumerate([chain_id for chain_id in state.chain_sequences if len(state.chain_sequences[chain_id]) > 0]):
             with tmd_sequence_cols[i]:
                 # update tmd state
                 if f"{chain_id}_tmd" not in state.tmds:

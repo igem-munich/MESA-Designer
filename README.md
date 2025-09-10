@@ -24,7 +24,7 @@ git clone https://gitlab.igem.org/2025/software-tools/munich mesa-designer
 cd mesa-designer
 docker build -t mesa-designer .
  ```
-now tht the repository is build, run it
+now that the image is built, run it
 ```bash
 docker run -p 8501:8501 mesa-designer 
 ```
