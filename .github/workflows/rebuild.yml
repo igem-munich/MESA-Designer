@@ -16,4 +16,6 @@ jobs:
           username: ${{ secrets.USER }}
           port: ${{ secrets.PORT }}
           key: ${{ secrets.KEY }}
-          script: docker compose up --build --force-recreate --detach --no-cache
+          script: |
+            docker compose build --no-cache
+            docker up --force-recreate --detach
