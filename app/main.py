@@ -120,7 +120,9 @@ def update_split_protease_value() -> None:
     state.split_protease_toggle_value = not state.split_protease_toggle_value
 
 
-def update_linker_text_input(chain_id: str) -> None:
+def update_linker_text_input(chain_id) -> None:
+    # debug
+    print(chain_id)
     state.linkers[f"{chain_id}_linker"] = state[f"{chain_id}_linker_sequence"].upper()
 
 
@@ -505,7 +507,7 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
             label=f"{chain_id} Linker Sequence",
             value=state.linkers[f"{chain_id}_linker"],
             on_change=update_linker_text_input,
-            args=chain_id,
+            args=(chain_id, ),
             max_chars=1000
         )
 
