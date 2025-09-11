@@ -21,6 +21,10 @@ import zipfile
 import io
 import json
 from datetime import datetime
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 # session state
 state = st.session_state
@@ -136,15 +140,39 @@ def generate_download() -> None:
             if not state[f"{key}_checkbox"]:
                 continue
 
-            text = construct[0].strip() + "\n"
-            for part in construct[1:]:
-                if isinstance(part, tuple):
-                    text += part[0]
-                else:
-                    text += part
+            # init record creation
+            record_name: str = "_".join(construct[0].replace(">", "").split(" ")).strip()
+            record_sequence: str = ""
+            record_features: list[SeqFeature] = []
 
-            file_name = f"{key.replace(' ', '_').replace(':', '').replace('-', '_').replace('/', '_')}.fasta"
-            zf.writestr(file_name, text)
+            for part in construct[1:]:
+                if part == "":
+                    continue
+
+                if isinstance(part, tuple):
+                    if len(part[0]) > 0:
+                        record_features.append(SeqFeature(location=FeatureLocation(start=len(record_sequence),
+                                                                                   end=(len(record_sequence) + len(part[0]))),
+                                                          type="CDS",
+                                                          qualifiers={"name": part[1]}))
+                        record_sequence += part[0]
+
+                else:
+                    if len(part) > 0:
+                        record_sequence += part
+
+            record = SeqRecord(Seq(record_sequence),
+                               id=record_name,
+                               name=record_name,
+                               description=record_name,
+                               features=record_features,
+                               annotations={"molecule_type": "PROTEIN"})
+
+            tmp_file = io.StringIO()
+            SeqIO.write(record, tmp_file, "genbank")
+
+            file_name = f"{key.replace(' ', '_').replace(':', '').replace('-', '_').replace('/', '_')}.gb"
+            zf.writestr(file_name, tmp_file.getvalue())
 
         # add PDB structures
         if state.download_sel_pdb and state.pdbs and state.pdb_selection:
@@ -1158,13 +1186,13 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
                                                                      + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
                                                                      + ["GGGSGGGS" if chain_id in state.cargo_chain_association else ""]
                                                                      + [(state.cargo_sequence, "Cargo", "#bd4258") if chain_id in state.cargo_chain_association else ""]
-                                                                     + ["." if not chain_id in state.aip_chain_association else ""]
+                                                                     + ["*" if not chain_id in state.aip_chain_association else ""]
                                                                      )
 
                     if chain_id in state.aip_chain_association:
                         construct_list[f"{chain_id}_N-Term Protease"].append("GGGSGGGS")
                         construct_list[f"{chain_id}_N-Term Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
-                        construct_list[f"{chain_id}_N-Term Protease"].append(".")
+                        construct_list[f"{chain_id}_N-Term Protease"].append("*")
 
                 elif chain_id in state.protease_chain_association["c"]:
                     construct_list[f"{chain_id}_C-Term Protease"] = ([f"> {chain_id}_C-Term Protease{'_CARGO' if chain_id in state.cargo_chain_association else ''}\n\n"]
@@ -1176,32 +1204,32 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
                                                                      + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
                                                                      + ["GGGSGGGS" if chain_id in state.cargo_chain_association else ""]
                                                                      + [(state.cargo_sequence, "Cargo", "#bd4258") if chain_id in state.cargo_chain_association else ""]
-                                                                     + ["." if not chain_id in state.aip_chain_association else ""]
+                                                                     + ["*" if not chain_id in state.aip_chain_association else ""]
                                                                      )
 
                     if chain_id in state.aip_chain_association:
                         construct_list[f"{chain_id}_C-Term Protease"].append("GGGSGGGS")
                         construct_list[f"{chain_id}_C-Term Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence,"AIP", "#5aa56b"))
-                        construct_list[f"{chain_id}_C-Term Protease"].append(".")
+                        construct_list[f"{chain_id}_C-Term Protease"].append("*")
 
             else:
                 if chain_id in state.protease_chain_association["complete"]:
                     construct_list[f"{chain_id}_Protease"] = ([f"> {chain_id}_Protease\n\n"]
                                                               + current_chain
                                                               + [(TEVP_DATA[state.complete_protease_selection][1] if not state.custom_protease_toggle else state.custom_protease_sequence, "Protease", "#6b46b9")]
-                                                              + ["." if not chain_id in state.aip_chain_association else ""]
+                                                              + ["*" if not chain_id in state.aip_chain_association else ""]
                                                               )
 
                     if chain_id in state.aip_chain_association:
                         construct_list[f"{chain_id}_Protease"].append("GGGSGGGS")
                         construct_list[f"{chain_id}_Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
-                        construct_list[f"{chain_id}_Protease"].append(".")
+                        construct_list[f"{chain_id}_Protease"].append("*")
 
                 elif chain_id in state.cargo_chain_association:
                     construct_list[f"{chain_id}_Cargo"] = ([f"> {chain_id}_Cargo\n\n"]
                                                            + current_chain
                                                            + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b"), "GGGSGGGS", (state.cargo_sequence, "Cargo", "#bd4258")]
-                                                           + ["." if not chain_id in state.aip_chain_association else ""]
+                                                           + ["*" if not chain_id in state.aip_chain_association else ""]
                                                            )
 
             # create FRET sequences
@@ -1209,13 +1237,13 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
                 construct_list[f"{chain_id}_FRET_mVenus"] = ([f"> {chain_id}_FRET_mVenus\n\n"]
                                                              + current_chain
                                                              + [(FRET_ICDs["mVenus"][1], "mVenus", "#43b6bc")]
-                                                             + ["."]
+                                                             + ["*"]
                                                              )
 
                 construct_list[f"{chain_id}_FRET_mCerulean"] = ([f"> {chain_id}_FRET_mCerulean\n\n"]
                                                                 + current_chain
                                                                 + [(FRET_ICDs["mCerulean"][1], "mCerulean", "#c43b81")]
-                                                                + ["."]
+                                                                + ["*"]
                                                                 )
 
         # store in state

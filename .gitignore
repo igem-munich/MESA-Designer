@@ -11,3 +11,4 @@
 /venv/
 /src/
 ReceptorsDB.db
+/test/
