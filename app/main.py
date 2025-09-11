@@ -12,6 +12,7 @@ import streamlit as st
 from stmol import *
 from streamlit_js_eval import streamlit_js_eval
 from streamlit_sortables import sort_items
+#from st_aggrid import AgGridReturn, AgGrid, GridOptionsBuilder
 import py3Dmol
 from annotated_text import annotated_text
 from util.antibody_search import search_antibodies
@@ -279,36 +280,42 @@ if state.sabdab is not None:
                                  hide_index=True,
                                  key="sabdab_dataframe")
 
+#        grid_builder = GridOptionsBuilder.from_dataframe(state.sabdab.drop(columns=["organism", "heavy_species", "light_species", "model", "antigen_chain", "short_header"]))
+#        grid_builder.configure_selection(selection_mode="single", use_checkbox=True)
+#        grid_builder.configure_auto_height(autoHeight=True)
+#        grid_builder.configure_side_bar(filters_panel=True, columns_panel=False)
+#
+#        highglight_code = f"""
+#        function(cellClassParams) {{
+#            if (cellClassParams.
+#        }}
+#        """
+#
+#        grid_options = grid_builder.build()
+#
+#        AgGrid(data=state.sabdab.drop(columns=["organism", "heavy_species", "light_species", "model", "antigen_chain", "short_header"]), gridOptions=grid_options, key="sabdab_dataframe_new")
+#
 #        # hightlight search text in sabdab dataframe
 #        components.html(f"""
 #        <script>
-#            window.addEventListener("load", function(){{
-#                var searchString = JSON.parse('{json.dumps(state.search_input)}');
+#            console.log("JS: Testing element selection from main window.");
 #
-#                var df = window.parent.document.getElementById("st-key-sabdab_dataframe");
+#            // Select the AgGrid container by its class name
+#            var agGridContainer = parent.document.querySelector(".st-key-sabdab_dataframe_new");
 #
-#                console.log("Searching for " + searchString);
+#            if (agGridContainer) {{
+#                console.log("JS: Successfully found AgGrid container by class! Element:", agGridContainer);
+#                values = agGridContainer.querySelector(".ag-cell-value");
+#                console.log(values);
+#            }} else {{
+#                console.log("JS: AgGrid container ('.st-key-sabdab_dataframe_new') NOT found. This might be a timing issue.");
+#            }}
 #
-#                if (df) {{
-#                    var cells = df.querySelectorAll("td");
-#
-#                    cells.forEach(function(cell) {{
-#                        var cellText = cell.innerText;
-#                        // Create a case-insensitive regular expression for the search string
-#                        var regex = new RegExp(searchString, "gi");
-#
-#                        // Only highlight if searchString is not empty and a match is found
-#                        if (searchString && cellText.match(regex)) {{
-#                            // Replace all occurrences of the search string with a highlighted version
-#                            cell.innerHTML = cellText.replace(regex, function(match) {{
-#                                return "<span style='background-color: yellow;'>" + match + "</span>";
-#                            }});
-#                        }}
-#                    }});
-#                }}
-#            }});
+#            // Return a value (required by streamlit_js_eval)
+#            "Element selection test complete";
 #        </script>
-#        """, height=0, width=0)
+#        """)
+#        #streamlit_js_eval(js_expressions=js_code, key="aggrid_selection_test")
 
         try:
             state.pdb_selection = state.sabdab.iloc[selection["selection"]["rows"]]["pdb"].to_numpy()[0]
