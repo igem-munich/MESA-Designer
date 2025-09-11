@@ -8,6 +8,7 @@ sys.path.insert(0, str(project_root))
 
 # regular code
 import streamlit as st
+#import streamlit.components.v1 as components
 from stmol import *
 from streamlit_js_eval import streamlit_js_eval
 from streamlit_sortables import sort_items
@@ -91,6 +92,7 @@ if "current_pdb" not in state:
     state.current_pdb = ""
 if "chain_sequences" not in state:
     state.chain_sequences = {"Chain A": "", "Chain B": ""}
+
 
 def update_chain_highlight_selection(chain_id_to_toggle: str, current_pdb_selection: str) -> None:
     # Access the actual state of the specific checkbox that was changed
@@ -211,8 +213,11 @@ col1, col2 = st.columns([1, 0.1])
 
 # create search field and button
 with col1:
-    search_field = st.text_input(label="Antigen-Search", key="search_input",
-                                 label_visibility="collapsed", placeholder="Search target antigen")
+    search_field = st.text_input(label="Antigen-Search",
+                                 key="search_input",
+                                 label_visibility="collapsed",
+                                 placeholder="Search target antigen"
+                                 )
 
 with col2:
     search_button = st.button("", key="search_button",
@@ -240,8 +245,41 @@ if state.sabdab is not None:
             "model": None,
             "antigen_chain": None,
             "short_header": None,
-            
-        },hide_index=True)
+        },
+                                 hide_index=True,
+                                 key="sabdab_dataframe")
+
+#        # hightlight search text in sabdab dataframe
+#        components.html(f"""
+#        <script>
+#            window.addEventListener("load", function(){{
+#                var searchString = JSON.parse('{json.dumps(state.search_input)}');
+#
+#                var df = window.parent.document.getElementById("st-key-sabdab_dataframe");
+#
+#                console.log("Searching for " + searchString);
+#
+#                if (df) {{
+#                    var cells = df.querySelectorAll("td");
+#
+#                    cells.forEach(function(cell) {{
+#                        var cellText = cell.innerText;
+#                        // Create a case-insensitive regular expression for the search string
+#                        var regex = new RegExp(searchString, "gi");
+#
+#                        // Only highlight if searchString is not empty and a match is found
+#                        if (searchString && cellText.match(regex)) {{
+#                            // Replace all occurrences of the search string with a highlighted version
+#                            cell.innerHTML = cellText.replace(regex, function(match) {{
+#                                return "<span style='background-color: yellow;'>" + match + "</span>";
+#                            }});
+#                        }}
+#                    }});
+#                }}
+#            }});
+#        </script>
+#        """, height=0, width=0)
+
         try:
             state.pdb_selection = state.sabdab.iloc[selection["selection"]["rows"]]["pdb"].to_numpy()[0]
             state.current_pdb = get_pdb_from_rcsb(state.pdb_selection)
