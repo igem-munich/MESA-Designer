@@ -19,7 +19,7 @@ jobs:
         Dockerfile
         docker-compose.yml
         requirements.txt
-        app/main.py
+        *
 
   rebuild:
     needs: detect
