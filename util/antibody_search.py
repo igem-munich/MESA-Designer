@@ -25,12 +25,12 @@ def get_highest_priority_path(list_of_paths, priority_list):
     # Return the first element, which is the highest-priority path
     return sorted_paths[0] if sorted_paths else None
 
-def search_antibodies(antigen: str, filter_structures: bool=True):
+def search_antibodies(antigen: str, filter_structures: bool=True) -> tuple[pd.DataFrame, dict, dict, datetime.timedelta]:
     time = datetime.datetime.now()
     sabdab_selection = sabdab_df.loc[sabdab_df["antigen_name"].str.contains(antigen, case=False) |
                                      sabdab_df["compound"].str.contains(antigen, case=False)].sort_values("affinity")
     skempi_selection = {}
-    pdb_files = {}
+    pdb_files: dict[str, str | Path | list[Path]] = {}
 
     for _, row in sabdab_selection.iterrows():
         pdb = row["pdb"]
@@ -40,19 +40,19 @@ def search_antibodies(antigen: str, filter_structures: bool=True):
         
         if Path(str(FILES_DIR) + "/sabdab_structures/imgt/"+ pdb+".pdb").is_file():
             pdb_files[pdb] = [Path(str(FILES_DIR) + "/sabdab_structures/imgt/"+ pdb+".pdb")] 
-        if pdb_files[pdb] == []:
+        if not pdb_files[pdb]:
             if Path(str(FILES_DIR) + "/sabdab_structures/chothia/"+ pdb+".pdb").is_file():
                 pdb_files[pdb] = [Path(str(FILES_DIR) + "/sabdab_structures/chothia/"+ pdb+".pdb")] 
-        if pdb_files[pdb] == []:
+        if not pdb_files[pdb]:
             if Path(str(FILES_DIR) + "/sabdab_structures/raw/"+ pdb+".pdb").is_file():
                 pdb_files[pdb] = [Path(str(FILES_DIR) + "/sabdab_structures/raw/"+ pdb+".pdb")] 
-        if pdb_files[pdb] == []:
+        if not pdb_files[pdb]:
             pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR)+"/skempi_structures")
-        if pdb_files[pdb] == []:
+        if not pdb_files[pdb]:
             pdb_files[pdb] = get_pdbs(pdb, str(FILES_DIR)+"/abdb_structures/chothia")
 
         
-        if(len(pdb_files[pdb]) == 0):
+        if len(pdb_files[pdb]) == 0:
             pdb_files[pdb] = ""
             continue
         pdb_files[pdb] = pdb_files[pdb][0]
@@ -69,3 +69,11 @@ def search_antibodies(antigen: str, filter_structures: bool=True):
 #        for key in pdb_files:
 #            pdb_files[key] = get_highest_priority_path(pdb_files[key], file_priority_list)
     return sabdab_selection, skempi_selection, pdb_files, datetime.datetime.now()-time
+
+def search_antibodies_api(antigen: str):
+    sabdab_selection, skempi_selection, pdb_files, search_duration = search_antibodies(antigen)
+
+    # convert sabdab to dict
+    sabdab_data = sabdab_selection.to_dict(orient="records")
+
+    return {"sabdab_data": sabdab_data, "search_duration": search_duration.total_seconds()}

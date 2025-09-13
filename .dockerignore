@@ -1,0 +1,14 @@
+files/abdb_structures
+files/sabdab_structures
+files/skempi_structures
+files/abdb_pdbs.zip
+files/sabdab_structures.zip
+files/skempi_pdbs.tgz
+experiment/
+.venv/
+.github/
+test/
+.git/
+.idea/
+.mypy_cache/
+files.zip

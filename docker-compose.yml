@@ -15,6 +15,7 @@ services:
         max-file: "1"
     ports:
       - "127.0.0.1:4010:8501"
+      - "127.0.0.1:4011:8000"
     networks:
       - mesa-designer-network
       - traefik-network
