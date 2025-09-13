@@ -15,8 +15,8 @@ jobs:
     needs: sync
     uses: ./.github/workflows/detect.yml
 
-  rebuild:
-    needs: detect
-    if: needs.detect.outputs.critical == 'true'
-    uses: ./.github/workflows/rebuild.yml
-    secrets: inherit
+#  rebuild:
+#    needs: detect
+#    if: needs.detect.outputs.critical == 'true'
+#    uses: ./.github/workflows/rebuild.yml
+#    secrets: inherit
