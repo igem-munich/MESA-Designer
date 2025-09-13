@@ -35,3 +35,10 @@ The MESA-Designer tool can now also be run as a docker container. Please find it
 You can run the docker container using : `docker run -p 8501:8501 mesa-designer`
 
 It can then be accessed from a webbrowser at localhost:8501
+
+### Pre-Release Versions
+
+##### v1.3-slim-beta
+This version is the first to include an API. In order to access it you have to run the container using:   
+`docker run -p 8501:8501 -p 8000:8000 mesa-designer`  
+You can find the api documentation at http://localhost:8000/docs.

@@ -215,7 +215,7 @@ async def get_attached_tmd(tmd: str = Query(..., description="The ID of the TMD 
 
 
 @app.get(path="/protease/overview", summary="Get an overview over protease design options and select amino acid sequences")
-async def get_protease_overview() -> dict[str, list[str] | dict[str, str | dict[str, str | list[str]]]]:
+async def get_protease_overview() -> dict[str, list[str] | dict[str, str | dict[str, str | list[str] | dict[str, list[str]]]]]:
     """
     Return an overview of available protease designs and select amino acid sequences. Additionally, point to papers which outline these and link to tools for custom protease design.
     """
@@ -297,4 +297,4 @@ async def get_attached_prs(prs_attachment_data: PrsAttachmentInput) -> dict[str,
     if not sequences or any(len(sequence) < 1 for sequence in sequences):
         raise HTTPException(status_code=400, detail="Provided sequences need to be at least of length 1.")
 
-    return {"prs": prs_sequence, "sequences": {id: sequence + "GGGSGGGS" + prs_sequence for id, sequence in sequences.items()}}
+    return {"prs": prs_sequence, "sequences": {chain_id: sequence + "GGGSGGGS" + prs_sequence for chain_id, sequence in sequences.items()}}
