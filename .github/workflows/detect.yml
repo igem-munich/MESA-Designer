@@ -20,7 +20,7 @@ jobs:
     runs-on: self-hosted
     outputs:
       changes: ${{ steps.all-changes.outputs.modified_files || steps.specific-changes.outputs.modified_files }}
-      critical: ${{ steps.specific-changes.outputs.any_modified || 'false' }}
+      critical: ${{ true }}
     steps:
       # Step 1: Checkout code
       - name: Checkout code

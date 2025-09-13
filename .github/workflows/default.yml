@@ -20,9 +20,3 @@ jobs:
     if: needs.detect.outputs.critical == 'true'
     uses: ./.github/workflows/rebuild.yml
     secrets: inherit
-
-  restart:
-    needs: detect
-    if: needs.detect.outputs.critical == 'false'
-    uses: ./.github/workflows/restart.yml
-    secrets: inherit
