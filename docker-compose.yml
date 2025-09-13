@@ -27,6 +27,7 @@ services:
       - "traefik.http.routers.mesa-designer.entrypoints=https"
       - "traefik.http.routers.mesa-designer.tls=true"
       - "traefik.http.routers.mesa-designer.tls.certresolver=cloudflare"
+      - "traefik.http.services.mesa-designer.loadbalancer.server.port=4010"
 
 networks:
   mesa-designer-network:
