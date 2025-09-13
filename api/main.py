@@ -10,7 +10,7 @@ sys.path.insert(0, str(project_root))
 
 from util.antibody_search import search_antibodies_api
 from util.pdb_interaction import get_pdb_from_rcsb, get_fasta_from_rcsb, extract_chains_from_pdb, generate_chain_selection, generate_linked_chains
-from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, SIGNAL_SEQS, PRS_DATA
+from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, SIGNAL_SEQS, PRS_DATA, AIP_DATA, FRET_ICDs
 
 # pydantic models
 class ChainSelection(BaseModel):
@@ -48,6 +48,7 @@ class SplitProteaseAttachmentInput(BaseModel):
         description="A dictionary with 'n' and 'c' as keys, mapping to the corresponding split protease amino acid sequences. Defaults to TEV protease splits."
     )
 
+
 class ProteaseAttachmentInput(BaseModel):
     sequence: str = Field(
         ...,
@@ -60,6 +61,7 @@ class ProteaseAttachmentInput(BaseModel):
         description="The protease sequence to attach to the provided sequence. Defaults to the TEV protease sequence."
     )
 
+
 class PrsAttachmentInput(BaseModel):
     sequences: dict[str, str] = Field(
         ...,
@@ -69,7 +71,50 @@ class PrsAttachmentInput(BaseModel):
     prs_sequence: str = Field(
         PRS_DATA["PRS"][1],
         examples=[PRS_DATA["PRS"][1]],
-        description="The Protease Recognition Sequence (PRS) to attach to the provided sequences. Defaults to a standard PRS sequence."
+        description="The Protease Recognition Sequence (PRS) to attach to the provided sequences. Defaults to a standard TEV-Protease PRS sequence."
+    )
+
+
+class AipAttachmentInput(BaseModel):
+    sequences: dict[str, str] = Field(
+        ...,
+        examples=[{"A": "SEQUENCE_FOR_CHAIN_A", "B": "SEQUENCE_FOR_CHAIN_B"}],
+        description="A dictionary mapping identifiers (e.g., chain names) to the amino acid sequences to which the auto-inhibitory peptide will be attached."
+    )
+    aip_sequence: str = Field(
+        AIP_DATA["AIP"][1],
+        examples=[AIP_DATA["AIP"][1]],
+        description="The auto-inhibitory peptide to attach tothe provided sequences. Defaults to a standard AIP for TEV-Protease."
+    )
+
+
+class CargoAttachmentInput(BaseModel):
+    sequences: dict[str, str] = Field(
+        ...,
+        examples=[{"A": "SEQUENCE_FOR_CHAIN_A", "B": "SEQUENCE_FOR_CHAIN_B"}],
+        description="A dictionary mapping identifiers (e.g., chain names) to the amino acid sequences to which the cargo will be attached."
+    )
+    cargo_sequence: str = Field(
+        ...,
+        examples=[{"AAAAAAAAAAAAAAAAAAAAAA"}],
+        description="The desired target's amino acid sequence"
+    )
+    prepend_prs: bool = Field(
+        True,
+        description="Optional toggle to prepend a PRS sequence"
+    )
+    prs_sequence: str = Field(
+        PRS_DATA["PRS"][1],
+        examples=[PRS_DATA["PRS"][1]],
+        description="The Protease Recognition Sequence (PRS) to attach to the provided sequences. Defaults to a standard TEV-Protease PRS sequence."
+    )
+
+
+class FretSequenceInput(BaseModel):
+    sequences: dict[str, str] = Field(
+        ...,
+        examples=[{"A": "SEQUENCE_FOR_CHAIN_A", "B": "SEQUENCE_FOR_CHAIN_B"}],
+        description="A dictionary mapping identifiers (e.g., chain names) to the amino acid sequences to which the cargo will be attached."
     )
 
 
@@ -242,7 +287,8 @@ async def get_protease_overview() -> dict[str, list[str] | dict[str, str | dict[
             },
             "aip": {
                 "name": "auto-inhibitory peptide",
-                "description": "The AIP sequence can reduce background signaling by reversibly blocking the active site of the protease"
+                "description": "The AIP sequence can reduce background signaling by reversibly blocking the active site of the protease",
+                "aip_sequences": AIP_DATA
             }
         }
     }
@@ -286,6 +332,14 @@ async def get_attached_protease(protease_attachment_data: ProteaseAttachmentInpu
     return {"protease_sequence": protease_sequence, "combined_sequence": sequence + "GGGSGGGS" + protease_sequence}
 
 
+@app.get(path="/protease/prs_overview", summary="Get an overview over available TEV-Protease recognition sequences.")
+async def get_prs_overview() -> dict[str, list[str] | dict[str, list[str]]]:
+    """
+    Get an overview of pre-selected available TEV-Protease recognition sequences and relevant publications
+    """
+    return {"prs_sequences": PRS_DATA, "sources": ["https://academic.oup.com/synbio/article/5/1/ysaa017/5913400", "https://pubs.acs.org/doi/10.1021/sb400128g"]}
+
+
 @app.post(path="/protease/attach_prs", summary="Attach a protease recognition sequence (PRS) to a provided set of sequences with a short linker.")
 async def get_attached_prs(prs_attachment_data: PrsAttachmentInput) -> dict[str, str | dict[str, str]]:
     """
@@ -297,4 +351,73 @@ async def get_attached_prs(prs_attachment_data: PrsAttachmentInput) -> dict[str,
     if not sequences or any(len(sequence) < 1 for sequence in sequences):
         raise HTTPException(status_code=400, detail="Provided sequences need to be at least of length 1.")
 
-    return {"prs": prs_sequence, "sequences": {chain_id: sequence + "GGGSGGGS" + prs_sequence for chain_id, sequence in sequences.items()}}
+    return {"prs_sequence": prs_sequence, "sequences": {chain_id: sequence + "GGGSGGGS" + prs_sequence for chain_id, sequence in sequences.items()}}
+
+
+@app.get(path="/protease/aip_overview", summary="Get an overview over available TEV-Protease auto-inhibitory peptides and sequences.")
+async def get_aip_overview() -> dict[str, list[str] | dict[str, list[str]]]:
+    """
+    Get an overview of pre-selected available TEV-Protease auto-inhibitory peptides and sequences and relevant publications
+    """
+    return {"aip_sequences": AIP_DATA, "sources": ["https://academic.oup.com/synbio/article/5/1/ysaa017/5913400", "https://pubs.acs.org/doi/10.1021/sb400128g"]}
+
+
+@app.post(path="/protease/attach_aip", summary="Attach an auto-inhibitory peptide to a provided set of sequences with a short linker.")
+async def get_attached_aip(aip_attachment_data: AipAttachmentInput) -> dict[str, str | dict[str, str]]:
+    """
+    Generate combined sequences of provided sequences and provided AIP sequence
+    """
+    sequences = aip_attachment_data.sequences
+    aip_sequence = aip_attachment_data.aip_sequence
+
+    if not sequences or any(len(sequence) < 1 for sequence in sequences):
+        raise HTTPException(status_code=400, detail="Provided sequences need to be at least of length 1.")
+
+    return {"aip_sequence": aip_sequence, "sequences": {chain_id: sequence + "GGGSGGGS" + aip_sequence for chain_id, sequence in sequences.items()}}
+
+
+@app.post(path="/cargo/attach_cargo", summary="Attach a cargo and optionally a protease recognition sequence to provided chains.")
+async def get_attached_cargo(cargo_data: CargoAttachmentInput) -> dict[str, bool | str | dict[str, str]]:
+    """
+    Generate combined sequences of provided sequences and provided cargo with optional PRS sequence
+    """
+    sequences = cargo_data.sequences
+    cargo_sequence = cargo_data.cargo_sequence
+    prepend_prs = cargo_data.prepend_prs
+    prs_sequence = cargo_data.prs_sequence
+
+    if not sequences or any(len(sequence) < 1 for sequence in sequences):
+        raise HTTPException(status_code=400, detail="Provided sequences need to be at least of length 1.")
+
+    if not cargo_sequence or len(cargo_sequence) < 1:
+        raise HTTPException(status_code=400, detail="Provided cargo sequence needs to be at least of length 1.")
+
+    if prepend_prs and (not prs_sequence or len(prs_sequence) < 1):
+        raise HTTPException(status_code=400, detail="Provided prs sequence needs to be at least of length 1.")
+
+    result: dict[str, str | bool | dict[str, str]] = {"cargo_sequence": cargo_sequence,
+                                                      "prepend_prs": prepend_prs,
+                                                      "sequences": {
+                                                          chain_id: sequence + "GGGSGGGS"
+                                                                    + (prs_sequence + "GGGSGGGS") if prepend_prs else ""
+                                                                    + cargo_sequence for chain_id, sequence in sequences.items()
+                                                      }}
+
+    if prepend_prs:
+        result["prs_sequence"] = prs_sequence
+
+    return result
+
+
+@app.post(path="/extra/fret_sequences", summary="Create FRET imaging sequences from input sequences")
+async def get_fret_sequences(fret_data: FretSequenceInput) -> dict[str, dict[str, str]]:
+    """
+    Generate mVENUS and mCERULEAN sequences for all provided sequences
+    """
+    result = {}
+
+    for key in FRET_ICDs.keys():
+        for chain_id, sequence in fret_data.sequences.items():
+            result[f"{chain_id}_{key}"] = sequence + "GGGSGGGS" + FRET_ICDs[key][1]
+
+    return {"sequences": result}
