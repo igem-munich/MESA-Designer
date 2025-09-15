@@ -26,6 +26,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
+import dnachisel
 
 # session state
 state = st.session_state
@@ -98,7 +99,7 @@ if "current_pdb" not in state:
 if "chain_sequences" not in state:
     state.chain_sequences = {"Chain A": "", "Chain B": ""}
 
-
+enzymes = ["AgeI", "AvrII", "BamHI", "BglII", "BsaI", "EcoRI", "HindIII", "KpnI", "NcoI", "NgoMIV", "NheI", "NotI", "PstI", "PvuII", "SacI", "SapI", "SpeI", "XbaI", "XhoI"]
 def update_chain_highlight_selection(chain_id_to_toggle: str, current_pdb_selection: str) -> None:
     # Access the actual state of the specific checkbox that was changed
     checkbox_key: str = f"{current_pdb_selection}_checkbox_chain_{chain_id_to_toggle}"
@@ -152,28 +153,42 @@ def generate_download() -> None:
 
                 if isinstance(part, tuple):
                     if len(part[0]) > 0:
-                        record_features.append(SeqFeature(location=FeatureLocation(start=len(record_sequence),
-                                                                                   end=(len(record_sequence) + len(part[0]))),
+                        record_features.append(SeqFeature(location=FeatureLocation(start=len(record_sequence)*3,
+                                                                                   end=(len(record_sequence) + len(part[0]))*3),
                                                           type="CDS",
-                                                          qualifiers={"name": part[1]}))
+                                                          qualifiers={"name": part[1], "translation": part[0]}))
                         record_sequence += part[0]
 
                 else:
                     if len(part) > 0:
                         record_sequence += part
 
-            record = SeqRecord(Seq(record_sequence),
+            sequence = dnachisel.reverse_translate(record_sequence)
+            cons = [dnachisel.AvoidPattern(pat+"_site") for pat in enzymes]
+            cons.append(dnachisel.EnforceTranslation())
+            problem = dnachisel.DnaOptimizationProblem(sequence = sequence, constraints = cons, objectives = [dnachisel.CodonOptimize(species="e_coli", method="match_codon_usage")])
+            print(problem.objectives_text_summary())
+            print(problem.constraints_text_summary())
+            print(problem.optimize_with_report("@memory")[1])
+            problem.resolve_constraints(final_check = True)
+            print(problem.number_of_edits())
+            print(problem.constraints_text_summary())
+            print(problem.objectives_text_summary())
+            recordseq = problem.to_record()
+
+
+
+            record = SeqRecord(recordseq.seq,
                                id=record_name,
                                name=record_name,
                                description=record_name,
                                features=record_features,
-                               annotations={"molecule_type": "PROTEIN"})
-
+                               annotations={"molecule_type": "DNA"})
             tmp_file = io.StringIO()
             SeqIO.write(record, tmp_file, "genbank")
-
             file_name = f"{key.replace(' ', '_').replace(':', '').replace('-', '_').replace('/', '_')}.gb"
             zf.writestr(file_name, tmp_file.getvalue())
+            
 
         # add PDB structures
         if state.download_sel_pdb and state.pdbs and state.pdb_selection:
