@@ -1344,17 +1344,9 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                 state.optimization_settings["species"] = species
 
             if state.optimization_settings["sel"] == "Custom":
-                opt = st.selectbox("Add Restriction Enzyme", ["None"] + list(rest_dict.keys()), index=None, key="restriction_add")
+                opt = st.multiselect("Add Restriction Enzyme", rest_dict.keys(), key="restriction_add")
                 if opt:
-                    if opt == "None" or opt ==  None:
-                        if not "custom_enzymes" in state.optimization_settings:
-                            state.optimization_settings["custom_enzymes"] = {}
-                    else:
-                        if not "custom_enzymes" in state.optimization_settings:
-                            print("hi")
-                            state.optimization_settings["custom_enzymes"] = {opt}
-                        else:
-                            state.optimization_settings["custom_enzymes"] = state.optimization_settings["custom_enzymes"] | {opt}
+                    state.optimization_settings["custom_enzymes"] = opt
                     cols = st.columns(3)
                     with cols[0]:
                         st.markdown("#### Restriction Enzyme")
@@ -1364,15 +1356,6 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                         st.markdown("#### Restriction Site")
                         for enzyme in state.optimization_settings["custom_enzymes"]:
                             st.write(rest_dict[enzyme]["site"])
-                    with cols[2]:
-                        st.markdown("#### Remove Enzyme")
-                        for enzyme in state.optimization_settings["custom_enzymes"]:
-                            st.checkbox(enzyme, label_visibility="collapsed", key=enzyme)
-                    for option in state.optimization_settings["custom_enzymes"]:
-                        if state[option]:
-                            state.optimization_settings["custom_enzymes"] = state.optimization_settings["custom_enzymes"] - {option}
-                            if opt != option:
-                                st.rerun()
                     state.optimization_settings["restriction_enzymes"] = state.optimization_settings["custom_enzymes"]
             else:   
                 state.optimization_settings["restriction_enzymes"] = rest_sites[state.optimization_settings["sel"]]
