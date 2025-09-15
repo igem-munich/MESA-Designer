@@ -254,31 +254,39 @@ st.set_page_config(page_title="MESA-Designer", layout="wide", page_icon="🧬")
 page_width = streamlit_js_eval(js_expressions="window.innerWidth", key="WIDTH", want_output=True)
 
 ### Target Search Field ################################################################################################
-# columns for search field and search button
-col1, col2 = st.columns([1, 0.1])
+custom_binder = st.toggle(
+    "Custom Binder",
+    value=False,
+    key="custom_binder_toggle",
+    help="Enter custom chain sequences for MESA-Chains. These could result from a BindCraft run."
+)
 
-# create search field and button
-with col1:
-    search_field = st.text_input(label="Antigen-Search",
-                                 key="search_input",
-                                 label_visibility="collapsed",
-                                 placeholder="Search target antigen"
-                                 )
+if not custom_binder:
+    # columns for search field and search button
+    col1, col2 = st.columns([1, 0.1])
 
-with col2:
-    search_button = st.button("", key="search_button",
-                              icon=":material/search:", width=45)
+    # create search field and button
+    with col1:
+        search_field = st.text_input(label="Antigen-Search",
+                                     key="search_input",
+                                     label_visibility="collapsed",
+                                     placeholder="Search target antigen"
+                                     )
 
-# search database and display options
-if search_button or (search_field and state.prev_search != search_field):
-    if not search_field:
-        st.error("Please enter a search query")
+    with col2:
+        search_button = st.button("", key="search_button",
+                                  icon=":material/search:", width=45)
 
-    with st.spinner(f"Searching for: **{search_field}**"):
-        state.sabdab, state.skempi, state.pdbs, state.search_duration = search_antibodies(search_field)
-        state.prev_search = search_field
+    # search database and display options
+    if search_button or (search_field and state.prev_search != search_field):
+        if not search_field:
+            st.error("Please enter a search query")
 
-if state.sabdab is not None:
+        with st.spinner(f"Searching for: **{search_field}**"):
+            state.sabdab, state.skempi, state.pdbs, state.search_duration = search_antibodies(search_field)
+            state.prev_search = search_field
+
+if state.sabdab is not None and not state.custom_binder_toggle:
     if len(state.sabdab) > 0:
         st.subheader("Select Binder")
         st.text(str(len(state.sabdab)) + " results, search took " + str(round(state.search_duration.total_seconds(), 2)) + " s")
@@ -344,11 +352,12 @@ if state.sabdab is not None:
         st.info("""  
         No targets were found  
         Please check for synonymous names of your target and check again  
+        You can try to use [BindCraft](https://colab.research.google.com/github/martinpacesa/BindCraft/blob/main/notebooks/BindCraft.ipynb) to create a de-novo binder and use its sequence as a custom binder
         """)
 
 ### Display Found Binder Structures ####################################################################################
 # create new columns for displaying pdb structure
-if state.pdbs and state.pdb_selection:
+if state.pdbs and state.pdb_selection and not state.custom_binder_toggle:
     st.header("Inspect Structures")
     pdb_cols = st.columns([0.2, 1, 0.2])
 
@@ -510,9 +519,42 @@ if state.pdbs and state.pdb_selection:
                 if i < len(sorted_chains[1]["items"]) - 1:
                     state.chain_sequences["Chain B"] += ("GGGGS" * 5)
 
+elif state.custom_binder_toggle:
+    state.pdb_fasta = ""
+
+    st.header("Custom Binder Sequence")
+    binder_chain_columns = st.columns(2)
+
+    with binder_chain_columns[0]:
+        st.subheader("Chain A")
+        chain_a_text_input = st.text_area(
+            label="Chain A Sequence",
+            value="",
+            height="content",
+            max_chars=5000
+        )
+
+        state.chain_sequences["Chain A"] = chain_a_text_input
+
+    with binder_chain_columns[1]:
+        st.subheader("Chain B")
+        chain_b_text_input = st.text_area(
+            label="Chain B Sequence",
+            value="",
+            height="content",
+            max_chars=5000
+        )
+
+        state.chain_sequences["Chain B"] = chain_b_text_input
+
+    if len(chain_a_text_input) > 0:
+        state.pdb_fasta += f"> Chain A\n{chain_a_text_input}\n"
+
+    if len(chain_b_text_input) > 0:
+        state.pdb_fasta += f"> Chain B\n{chain_b_text_input}\n"
 
 ### Build linker between Binder and TMD ################################################################################
-if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0) and state.pdb_selection:
+if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0:
     st.divider()
     st.header("Linker Design")
 
@@ -562,7 +604,7 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
         )
 
 ### TMD picker #########################################################################################################
-if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0) and state.pdb_selection:
+if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0:
     st.divider()
     # transmembran/intracellular mesa
     st.toggle(
@@ -622,7 +664,7 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
         state.tmds.clear()
 
 ### INTRACELLULAR PART DESIGNER ########################################################################################
-if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0) and state.pdb_selection:
+if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0:
     st.divider()
     st.header("Intracellular Component")
 
@@ -1037,7 +1079,7 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
             state.tag_chain_association = {}
 
 ### DOWNLOAD AND OVERVIEW ##############################################################################################
-if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0) and state.pdb_selection:
+if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0:
     st.divider()
     st.header("Component Overview")
     overview_container = st.container(border=True)
@@ -1298,8 +1340,9 @@ if state.pdbs and (len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_
             with additional_cols[0]:
                 st.checkbox(
                     label="Include PDB Structure",
-                    value=True,
-                    key="download_sel_pdb"
+                    value=not state.custom_binder_toggle,
+                    key="download_sel_pdb",
+                    disabled=state.custom_binder_toggle
                 )
 
             with additional_cols[1]:

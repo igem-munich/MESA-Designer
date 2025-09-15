@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, HTTPException, UploadFile, status, Path, Query
+from fastapi import FastAPI, HTTPException, Path, Query
 from pathlib import Path as pathlibPath
 import sys
 from pydantic import BaseModel, Field
@@ -10,7 +10,7 @@ sys.path.insert(0, str(project_root))
 
 from util.antibody_search import search_antibodies_api
 from util.pdb_interaction import get_pdb_from_rcsb, get_fasta_from_rcsb, extract_chains_from_pdb, generate_chain_selection, generate_linked_chains
-from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, SIGNAL_SEQS, PRS_DATA, AIP_DATA, FRET_ICDs
+from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, SIGNAL_SEQS, PRS_DATA, AIP_DATA, FRET_ICDs, TAG_SEQS
 
 # pydantic models
 class ChainSelection(BaseModel):
@@ -118,6 +118,17 @@ class FretSequenceInput(BaseModel):
     )
 
 
+class TagSequenceInput(BaseModel):
+    sequences: dict[str, str] = Field(
+        ...,
+        examples=[{"A": "SEQUENCE_FOR_CHAIN_A", "B": "SEQUENCE_FOR_CHAIN_B"}],
+        description="A dictionary mapping identifiers (e.g., chain names) to the amino acid sequences to which the tag will be prepended."
+    )
+    tag_sequence: str = Field(
+        ...,
+        description="Amino acid sequence of the tag to be prepended to all supplied sequences"
+    )
+
 
 # functions
 def get_pdb_with_http_error(pdb_id: str) -> str:
@@ -145,7 +156,7 @@ async def read_root() -> dict[str, str]:
 
 
 @app.get(path="/search_antigen", summary="Search for antibodies based on an antigen query")
-async def search_antigens(antigen: str = Query(..., description="The antigen name to search for")) -> dict[str, dict[str, str | int | None] | str]:
+async def search_antigens(antigen: str = Query(..., description="The antigen name to search for")):
     """
     Searches the antibody database for entries matching the provided antigen query.
     """
@@ -302,7 +313,7 @@ async def get_split_tevp() -> dict[str, dict[str, list[str]]]:
     }
 
 
-@app.post(path="/protease/attach_split", summary="Attach the chains of a split protease to two uploaded sequences with short linker.")
+@app.post(path="/protease/attach_split_protease", summary="Attach the chains of a split protease to two uploaded sequences with short linker.")
 async def get_attached_split_protease(split_protease_data: SplitProteaseAttachmentInput) -> dict[str, str | dict[str, str]]:
     """
     Generate combined chain sequences of input sequences (commonly received from /tmd/attach or /pdb/{pdb_id}/generate_linked_chains
@@ -421,3 +432,22 @@ async def get_fret_sequences(fret_data: FretSequenceInput) -> dict[str, dict[str
             result[f"{chain_id}_{key}"] = sequence + "GGGSGGGS" + FRET_ICDs[key][1]
 
     return {"sequences": result}
+
+
+@app.get(path="/extra/tag_overview", summary="Get an overview of select Tags from synthetic biology.")
+async def get_tag_overview() -> dict[str, list[str] | dict[str, list[str]]]:
+    """
+    Get an overview of available, commonly used Tag sequences.
+    """
+
+    return {"sources": ["https://academic.oup.com/synbio/article/5/1/ysaa017/5913400", "https://pubs.acs.org/doi/10.1021/sb400128g"], "tags": TAG_SEQS}
+
+
+@app.post(path="/extra/attach_tag", summary="Prepend supplied amino acid sequences to all provided sequences.")
+async def get_prepended_tag(tag_data: TagSequenceInput) -> dict[str, str | dict[str, str]]:
+    """
+    Generate sequences with the provided tag prepended to all supplied sequences.
+    """
+    sequences = tag_data.sequences
+    tag_sequence = tag_data.tag_sequence
+    return {"tag_sequence": tag_sequence, "sequences": {chain_id: tag_sequence + sequence for chain_id, sequence in sequences.items()}}
