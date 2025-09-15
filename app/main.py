@@ -23,12 +23,10 @@ import io
 import json
 from datetime import datetime
 from Bio import SeqIO
-from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.Restriction.Restriction_Dictionary import rest_dict
 import dnachisel
-import pandas as pd
 
 # session state
 state = st.session_state
@@ -131,8 +129,6 @@ def update_split_protease_value() -> None:
 
 
 def update_linker_text_input(chain_id) -> None:
-    # debug
-    #print(chain_id)
     state.linkers[f"{chain_id}_linker"] = state[f"{chain_id}_linker_sequence"].upper()
 
 
@@ -173,7 +169,6 @@ def generate_download() -> None:
             problem = dnachisel.DnaOptimizationProblem(sequence = sequence, constraints = cons, objectives = [dnachisel.CodonOptimize(species=state.optimization_settings["species"], method="match_codon_usage")])
             problem.resolve_constraints(final_check = True)
             problem.optimize()
-            print(problem.number_of_edits())
             recordseq = problem.to_record()
 
 
