@@ -26,7 +26,9 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
+from Bio.Restriction.Restriction_Dictionary import rest_dict
 import dnachisel
+import pandas as pd
 
 # session state
 state = st.session_state
@@ -66,6 +68,8 @@ if "download_data" not in state:
     state.download_data = None
 if "prev_search" not in state:
     state.prev_search = ""
+if "optimization_settings" not in state:
+    state.optimization_settings = {}
 if "themes" not in state:
     state.themes = {
         "current_theme": "dark",
@@ -99,7 +103,7 @@ if "current_pdb" not in state:
 if "chain_sequences" not in state:
     state.chain_sequences = {"Chain A": "", "Chain B": ""}
 
-enzymes = ["AgeI", "AvrII", "BamHI", "BglII", "BsaI", "EcoRI", "HindIII", "KpnI", "NcoI", "NgoMIV", "NheI", "NotI", "PstI", "PvuII", "SacI", "SapI", "SpeI", "XbaI", "XhoI"]
+rest_sites = {"iGEM BioBrick Full + SacI, NcoI, KpnI, HindIII": ["AgeI", "AvrII", "BamHI", "BglII", "BsaI", "EcoRI", "HindIII", "KpnI", "NcoI", "NgoMIV", "NheI", "NotI", "PstI", "PvuII", "SacI", "SapI", "SpeI", "XbaI", "XhoI"], "iGEM BioBrick Full": ["AgeI","AvrII","BamHI","BglII","BsaI","EcoRI","NgoMIV","NheI","NotI","PstI","PvuII","SapI","SpeI","XbaI","XhoI"], "RFC10": ["EcoRI","NotI","PstI","SpeI","XbaI"], "RFC1000": ["BsaI", "SapI"], "RFC12": ["AvrII","EcoRI","NheI","NotI","PstI","PvuII","SapI","SpeI","XbaI","XhoI"]}
 def update_chain_highlight_selection(chain_id_to_toggle: str, current_pdb_selection: str) -> None:
     # Access the actual state of the specific checkbox that was changed
     checkbox_key: str = f"{current_pdb_selection}_checkbox_chain_{chain_id_to_toggle}"
@@ -128,7 +132,7 @@ def update_split_protease_value() -> None:
 
 def update_linker_text_input(chain_id) -> None:
     # debug
-    print(chain_id)
+    #print(chain_id)
     state.linkers[f"{chain_id}_linker"] = state[f"{chain_id}_linker_sequence"].upper()
 
 
@@ -164,16 +168,12 @@ def generate_download() -> None:
                         record_sequence += part
 
             sequence = dnachisel.reverse_translate(record_sequence)
-            cons = [dnachisel.AvoidPattern(pat+"_site") for pat in enzymes]
+            cons = [dnachisel.AvoidPattern(pat+"_site") for pat in state.optimization_settings["restriction_enzymes"]]
             cons.append(dnachisel.EnforceTranslation())
-            problem = dnachisel.DnaOptimizationProblem(sequence = sequence, constraints = cons, objectives = [dnachisel.CodonOptimize(species="e_coli", method="match_codon_usage")])
-            print(problem.objectives_text_summary())
-            print(problem.constraints_text_summary())
-            print(problem.optimize_with_report("@memory")[1])
+            problem = dnachisel.DnaOptimizationProblem(sequence = sequence, constraints = cons, objectives = [dnachisel.CodonOptimize(species=state.optimization_settings["species"], method="match_codon_usage")])
             problem.resolve_constraints(final_check = True)
+            problem.optimize()
             print(problem.number_of_edits())
-            print(problem.constraints_text_summary())
-            print(problem.objectives_text_summary())
             recordseq = problem.to_record()
 
 
@@ -1332,7 +1332,51 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                         key=f"{key}_checkbox",
                         label_visibility="collapsed"
                     )
+        st.subheader("Sequence Optimization")
+        with st.container(border=True):
+            optimization_cols = st.columns(2)
+            with optimization_cols[0]:
+                option = st.selectbox("Avoid Restriction Sites", ("RFC10", "RFC12", "RFC1000", "iGEM BioBrick Full", "iGEM BioBrick Full + SacI, NcoI, KpnI, HindIII", "Custom"))
+                
+                state.optimization_settings["sel"] = option
+            with optimization_cols[1]:
+                species = st.selectbox("Select Species to optimize", ("H. Sapiens", "M. Musculus", "D. Melanogaster", "G. Gallus")).replace(". ", "_").lower()
+                state.optimization_settings["species"] = species
 
+            if state.optimization_settings["sel"] == "Custom":
+                opt = st.selectbox("Add Restriction Enzyme", ["None"] + list(rest_dict.keys()), index=None, key="restriction_add")
+                if opt:
+                    if opt == "None" or opt ==  None:
+                        if not "custom_enzymes" in state.optimization_settings:
+                            state.optimization_settings["custom_enzymes"] = {}
+                    else:
+                        if not "custom_enzymes" in state.optimization_settings:
+                            print("hi")
+                            state.optimization_settings["custom_enzymes"] = {opt}
+                        else:
+                            state.optimization_settings["custom_enzymes"] = state.optimization_settings["custom_enzymes"] | {opt}
+                    cols = st.columns(3)
+                    with cols[0]:
+                        st.markdown("#### Restriction Enzyme")
+                        for enzyme in state.optimization_settings["custom_enzymes"]:
+                            st.write(enzyme)
+                    with cols[1]:
+                        st.markdown("#### Restriction Site")
+                        for enzyme in state.optimization_settings["custom_enzymes"]:
+                            st.write(rest_dict[enzyme]["site"])
+                    with cols[2]:
+                        st.markdown("#### Remove Enzyme")
+                        for enzyme in state.optimization_settings["custom_enzymes"]:
+                            st.checkbox(enzyme, label_visibility="collapsed", key=enzyme)
+                    for option in state.optimization_settings["custom_enzymes"]:
+                        if state[option]:
+                            state.optimization_settings["custom_enzymes"] = state.optimization_settings["custom_enzymes"] - {option}
+                            if opt != option:
+                                st.rerun()
+                    state.optimization_settings["restriction_enzymes"] = state.optimization_settings["custom_enzymes"]
+            else:   
+                state.optimization_settings["restriction_enzymes"] = rest_sites[state.optimization_settings["sel"]]
+                
         # include additional files such as pdb and data
         st.subheader("Additional Files")
         with st.container(border=True):
