@@ -132,7 +132,7 @@ class TagSequenceInput(BaseModel):
 
 # functions
 def get_pdb_with_http_error(pdb_id: str) -> str:
-    pdb = get_pdb_from_rcsb(pdb_id)
+    pdb: str | None = get_pdb_from_rcsb(pdb_id)
     if not pdb:
         raise HTTPException(status_code=404, detail=f"PDB ID '{pdb_id}' not found or could not be retrieved from RCSB.")
 
@@ -140,7 +140,7 @@ def get_pdb_with_http_error(pdb_id: str) -> str:
 
 
 # init fast api
-app = FastAPI(
+app: FastAPI = FastAPI(
     title="MESA-Designer API",
     description="API for MESA-Designer to programmatically interact with its functionalities.",
     version="0.1.0",
@@ -156,7 +156,7 @@ async def read_root() -> dict[str, str]:
 
 
 @app.get(path="/search_antigen", summary="Search for antibodies based on an antigen query")
-async def search_antigens(antigen: str = Query(..., description="The antigen name to search for")):
+async def search_antigens(antigen: str = Query(..., description="The antigen name to search for")) -> dict[str, list[dict[str, str]] | float]:
     """
     Searches the antibody database for entries matching the provided antigen query.
     """
@@ -177,7 +177,7 @@ async def get_pdb_chains(pdb_id: str = Path(..., description="The PDB ID to retr
     """
     pdb_content: str = get_pdb_with_http_error(pdb_id)
 
-    chains_data = extract_chains_from_pdb(file_content=pdb_content)
+    chains_data: list[dict[str, str]] = extract_chains_from_pdb(file_content=pdb_content)
     if not chains_data:
         raise HTTPException(status_code=404, detail=f"No chain data extracted for PDB ID '{pdb_id}'.")
 
@@ -266,12 +266,12 @@ async def get_attached_tmd(tmd: str = Query(..., description="The ID of the TMD 
     if not tmd.upper() in [key.upper() for key in TMD_DATA.keys()]:
         raise HTTPException(status_code=400, detail="Invalid TMD provided. You an get an overview of available options at /tmd/overview")
 
-    tmd_sequence = TMD_DATA[tmd.upper()][1].upper()
+    tmd_sequence: str = TMD_DATA[tmd.upper()][1].upper()
     return {"cd4": SIGNAL_SEQS["CD4"][1], "tmd": tmd.upper(), "tmd_sequence": tmd_sequence, "linker": linker.upper(), "combined_sequence": SIGNAL_SEQS["CD4"][1] + sequence.upper() + linker.upper() + tmd_sequence}
 
 
 @app.get(path="/protease/overview", summary="Get an overview over protease design options and select amino acid sequences")
-async def get_protease_overview() -> dict[str, list[str] | dict[str, str | dict[str, str | list[str] | dict[str, list[str]]]]]:
+async def get_protease_overview() -> dict:
     """
     Return an overview of available protease designs and select amino acid sequences. Additionally, point to papers which outline these and link to tools for custom protease design.
     """
@@ -318,8 +318,8 @@ async def get_attached_split_protease(split_protease_data: SplitProteaseAttachme
     """
     Generate combined chain sequences of input sequences (commonly received from /tmd/attach or /pdb/{pdb_id}/generate_linked_chains
     """
-    sequences = split_protease_data.sequences
-    protease_splits = split_protease_data.protease_splits
+    sequences: dict[str, str] = split_protease_data.sequences
+    protease_splits: dict[str, str] = split_protease_data.protease_splits
 
     if not sequences or any(len(sequence) < 1 for sequence in sequences.values()):
         raise HTTPException(status_code=400, detail="You need to provide chains to attach the split protease components to.")
@@ -334,8 +334,8 @@ async def get_attached_protease(protease_attachment_data: ProteaseAttachmentInpu
     """
     Generate combined sequence of provided sequence and default TEV protease or provided custom protease
     """
-    sequence = protease_attachment_data.sequence
-    protease_sequence = protease_attachment_data.protease_sequence
+    sequence: str = protease_attachment_data.sequence
+    protease_sequence: str = protease_attachment_data.protease_sequence
 
     if not sequence or len(sequence) < 1:
         raise HTTPException(status_code=400, detail="You need to provide a sequence to attach the protease sequence to.")
@@ -356,8 +356,8 @@ async def get_attached_prs(prs_attachment_data: PrsAttachmentInput) -> dict[str,
     """
     Generate combined sequences of provided sequences and provided PRS sequence
     """
-    sequences = prs_attachment_data.sequences
-    prs_sequence = prs_attachment_data.prs_sequence
+    sequences: dict[str, str] = prs_attachment_data.sequences
+    prs_sequence: str = prs_attachment_data.prs_sequence
 
     if not sequences or any(len(sequence) < 1 for sequence in sequences):
         raise HTTPException(status_code=400, detail="Provided sequences need to be at least of length 1.")
@@ -378,8 +378,8 @@ async def get_attached_aip(aip_attachment_data: AipAttachmentInput) -> dict[str,
     """
     Generate combined sequences of provided sequences and provided AIP sequence
     """
-    sequences = aip_attachment_data.sequences
-    aip_sequence = aip_attachment_data.aip_sequence
+    sequences: dict[str, str] = aip_attachment_data.sequences
+    aip_sequence: str = aip_attachment_data.aip_sequence
 
     if not sequences or any(len(sequence) < 1 for sequence in sequences):
         raise HTTPException(status_code=400, detail="Provided sequences need to be at least of length 1.")
@@ -392,10 +392,10 @@ async def get_attached_cargo(cargo_data: CargoAttachmentInput) -> dict[str, bool
     """
     Generate combined sequences of provided sequences and provided cargo with optional PRS sequence
     """
-    sequences = cargo_data.sequences
-    cargo_sequence = cargo_data.cargo_sequence
-    prepend_prs = cargo_data.prepend_prs
-    prs_sequence = cargo_data.prs_sequence
+    sequences: dict[str, str] = cargo_data.sequences
+    cargo_sequence: str = cargo_data.cargo_sequence
+    prepend_prs: bool = cargo_data.prepend_prs
+    prs_sequence: str = cargo_data.prs_sequence
 
     if not sequences or any(len(sequence) < 1 for sequence in sequences):
         raise HTTPException(status_code=400, detail="Provided sequences need to be at least of length 1.")
@@ -425,7 +425,7 @@ async def get_fret_sequences(fret_data: FretSequenceInput) -> dict[str, dict[str
     """
     Generate mVENUS and mCERULEAN sequences for all provided sequences
     """
-    result = {}
+    result: dict[str, str] = {}
 
     for key in FRET_ICDs.keys():
         for chain_id, sequence in fret_data.sequences.items():
@@ -448,6 +448,6 @@ async def get_prepended_tag(tag_data: TagSequenceInput) -> dict[str, str | dict[
     """
     Generate sequences with the provided tag prepended to all supplied sequences.
     """
-    sequences = tag_data.sequences
-    tag_sequence = tag_data.tag_sequence
+    sequences: dict[str, str] = tag_data.sequences
+    tag_sequence: str = tag_data.tag_sequence
     return {"tag_sequence": tag_sequence, "sequences": {chain_id: tag_sequence + sequence for chain_id, sequence in sequences.items()}}

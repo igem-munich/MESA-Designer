@@ -1,4 +1,6 @@
 import sqlite3
+
+import requests
 import requests as req
 from tqdm import tqdm
 from pathlib import Path
@@ -15,12 +17,12 @@ def download_file(url: str, file_path: str) -> bool:
         Path.mkdir(Path(file_path).parent, parents=True, exist_ok=True)
 
         # Send a GET request to the URL, enabling streaming to handle large files
-        res = req.get(url, stream=True)
+        res: requests.Response = req.get(url, stream=True)
         # Raise an HTTPError for bad responses (4xx or 5xx)
         res.raise_for_status()
 
         # Get the total size of the file from the 'content-length' header for the progress bar. Defaults to 0 for missing header
-        size = int(res.headers.get("content-length", 0))
+        size: int = int(res.headers.get("content-length", 0))
 
         # Initialize a tqdm progress bar to display download progress
         # It shows total size, unit (Bytes), unit scaling (to KB/MB), and a description
@@ -48,7 +50,7 @@ if Path("./files/done.txt").exists():
     exit()
 
 # online mode
-offline_mode = False # input("Would you like to use this offline? Note: requires 55GB download
+offline_mode: bool = False # input("Would you like to use this offline? Note: requires 55GB download
 
 # create dictionaries for databases
 Path.mkdir(Path("./data"))
@@ -68,6 +70,8 @@ if not download_file("https://opig.stats.ox.ac.uk/webapps/sabdab-sabpred/sabdab/
 print("Creating sqlite3 database...")
 Path.mkdir(Path("./data"), parents=True, exist_ok=True)
 conn: sqlite3.Connection = create_database("./data/sabdab_summary_all.sqlite")
+header: list[str]
+data: list[list[str]]
 header, data = read_csv("./files/sabdab_summary_all.tsv", "\t")
 create_table_from_header(conn, header, "main")
 insert_data(conn, data, "main")
@@ -99,7 +103,7 @@ if offline_mode:
 
     # rename pdb files to be in line with sabdab naming (entire database)
     for path in Path("./files/skempi_structures").glob("*"):
-        new_path = path.with_name(path.name.lower())
+        new_path: Path = path.with_name(path.name.lower())
         os.rename(path, new_path)
 
     print("Successfully downloaded skempi pdb files!")
@@ -112,6 +116,8 @@ if not download_file("https://life.bsc.es/pid/skempi2/database/download/skempi_v
 
 # create a new table and insert the data
 print("Adding data to sqlite database...")
+skempi_header: list[str]
+skempi_data: list[list[str]]
 skempi_header, skempi_data = read_csv("./files/skempi_v2.csv", ";")
 conn = create_connection("./data/sabdab_summary_all.sqlite")
 create_table_from_header(conn, skempi_header, "skempi")

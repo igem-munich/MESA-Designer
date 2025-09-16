@@ -19,7 +19,7 @@ def read_csv(filepath: str, delimiter: str=",") -> tuple[list[str], list[list[st
             data.append(row)
     return header, data
 
-def create_table_from_header(conn: sqlite3.Connection, header: str, table_name: str) -> None:
+def create_table_from_header(conn: sqlite3.Connection, header: list[str], table_name: str) -> None:
     columns: list[str] = [f"'{col}' TEXT" for col in header]
     column_str: str = ', '.join(columns)
 
