@@ -4,7 +4,7 @@ import re
 import requests
 
 def extract_chains_from_pdb(file_path: str | None = None, file_content: str | None = None) -> list[dict[str, str]]:
-    chains_data = []
+    chains_data: list[dict[str, str]] = []
     try:
         records = SeqIO.parse(StringIO(file_content) if file_content else file_path, "pdb-atom")
         for record in records:
@@ -16,7 +16,7 @@ def extract_chains_from_pdb(file_path: str | None = None, file_content: str | No
                 else:
                     chain_id_display = record.id
 
-            fasta_name = re.sub("[^a-zA-Z0-9]", "", record.id.replace(":", "_"))
+            fasta_name: str = re.sub("[^a-zA-Z0-9]", "", record.id.replace(":", "_"))
 
             chains_data.append({
                 "id": record.id,
@@ -31,9 +31,9 @@ def extract_chains_from_pdb(file_path: str | None = None, file_content: str | No
 
 
 def extract_chains_from_fasta(fasta: str) -> list[dict] | None:
-    chains_data = []
+    chains_data: list = []
     try:
-        fasta_io = StringIO(fasta)
+        fasta_io: StringIO = StringIO(fasta)
         records = SeqIO.parse(fasta_io, "fasta")
 
         for record in records:
@@ -46,9 +46,9 @@ def extract_chains_from_fasta(fasta: str) -> list[dict] | None:
         return None
 
 
-def convert_chains_to_fasta_string(chains_data: list[dict]) -> str:
+def convert_chains_to_fasta_string(chains_data: list[dict[str, str]]) -> str:
     """Converts a list of chain dictionaries to a FASTA formatted string."""
-    fasta_string = StringIO()
+    fasta_string: StringIO = StringIO()
     for chain in chains_data:
         fasta_string.write(f">{chain['fasta_name']}\n{chain['sequence']}\n")
     return fasta_string.getvalue()
@@ -58,7 +58,7 @@ def extract_fasta_from_pdb(file_path: str) -> str:
     """
     Original function, modified to use extract_chains_from_pdb for consistency.
     """
-    chains_data = extract_chains_from_pdb(file_path)
+    chains_data: list[dict[str, str]] = extract_chains_from_pdb(file_path)
     return convert_chains_to_fasta_string(chains_data)
 
 
@@ -67,10 +67,10 @@ def cut_protein(file_content: str) -> str:
 
 
 def get_pdb_from_rcsb(pdb_id: str) -> str | None:
-    url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
+    url: str = f"https://files.rcsb.org/download/{pdb_id}.pdb"
 
     try:
-        res = requests.get(url)
+        res: requests.Response = requests.get(url)
         res.raise_for_status()
         return res.text
     except requests.exceptions.RequestException as e:
@@ -79,9 +79,9 @@ def get_pdb_from_rcsb(pdb_id: str) -> str | None:
 
 
 def get_fasta_from_rcsb(pdb_id: str) -> str | None:
-    url = f"https://www.rcsb.org/fasta/entry/{pdb_id}"
+    url: str = f"https://www.rcsb.org/fasta/entry/{pdb_id}"
     try:
-        res = requests.get(url)
+        res: requests.Response = requests.get(url)
         res.raise_for_status()
         return res.text
     except requests.exceptions.RequestException as e:
@@ -100,14 +100,14 @@ def generate_chain_selection(pdb_content: str, selection: dict[str, tuple[int, i
         return None
 
     chain_selection: dict[str, str] = {}
-    pdb_data = extract_chains_from_pdb(file_content=pdb_content)
+    pdb_data: list[dict[str, str]] = extract_chains_from_pdb(file_content=pdb_content)
 
     for chain_data in pdb_data:
-        chain_id = chain_data["chain_id"]
+        chain_id: str = chain_data["chain_id"]
         if not chain_id in selection.keys():
             continue
 
-        sequence = chain_data["sequence"][selection[chain_id][0]:selection[chain_id][1]]
+        sequence: str = chain_data["sequence"][selection[chain_id][0]:selection[chain_id][1]]
         chain_selection[chain_id] = sequence
 
     return chain_selection
@@ -125,7 +125,7 @@ def generate_linked_chains(pdb_content: str, chain_selection: dict[str, str], li
     if not (pdb_content and chain_selection and linkage):
         return None
 
-    chains = {key: "" for key in linkage.keys()}
+    chains: dict[str, str] = {key: "" for key in linkage.keys()}
 
     for mesa_chain_id in chains:
         for i, chain_id in enumerate(linkage[mesa_chain_id]):
