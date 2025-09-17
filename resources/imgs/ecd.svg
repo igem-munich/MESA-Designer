@@ -1,0 +1,83 @@
+<svg
+   id="Layer_2"
+   data-name="Layer 2"
+   viewBox="0 0 200.02 120"
+   version="1.1"
+   sodipodi:docname="MESA.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview30"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="3.0305403"
+     inkscape:cx="-42.896641"
+     inkscape:cy="208.70866"
+     inkscape:window-width="2880"
+     inkscape:window-height="1728"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_2" />
+  <defs
+     id="defs4">
+    <style
+       id="style2">
+      .cls-1 {
+        fill: #e60082;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5 {
+        stroke-miterlimit: 10;
+        stroke-width: 10px;
+      }
+
+      .cls-1, .cls-3, .cls-4 {
+        stroke: #000;
+      }
+
+      .cls-2 {
+        stroke: #383c3b;
+      }
+
+      .cls-2, .cls-5 {
+        fill: none;
+      }
+
+      .cls-3 {
+        fill: #f6ae2c;
+      }
+
+      .cls-4 {
+        fill: #008dc9;
+      }
+
+      .cls-5 {
+        stroke: #a7afad;
+      }
+    </style>
+  </defs>
+<g
+     id="ecd"
+     inkscape:label="ecd"
+     style="display:inline">
+    <path
+       class="cls-4"
+       d="m 65.58,94.64 v 0 c 0,0 0,0 0,0 -4.92,2.84 -10.52,3.47 -15.57,2.19 C 44.96,95.55 40.43,92.37 37.68,87.6 L 22.64,61.55 7.6,35.5 C 4.84,30.72 4.35,25.22 5.77,20.2 7.19,15.18 10.54,10.65 15.45,7.81 v 0 c 0,0 0,0 0,0 4.92,-2.84 10.52,-3.47 15.57,-2.19 5.06,1.28 9.58,4.46 12.33,9.23 L 58.39,40.9 73.43,66.95 c 2.76,4.78 3.25,10.28 1.83,15.3 -1.42,5.02 -4.77,9.55 -9.68,12.39 z"
+       id="path12" />
+    <path
+       class="cls-4"
+       d="m 134.44,94.64 v 0 c 0,0 0,0 0,0 4.92,2.84 10.52,3.47 15.57,2.19 5.05,-1.28 9.58,-4.46 12.33,-9.23 L 177.38,61.55 192.42,35.5 c 2.76,-4.78 3.25,-10.28 1.83,-15.3 -1.42,-5.02 -4.77,-9.55 -9.68,-12.39 v 0 c 0,0 0,0 0,0 C 179.65,4.97 174.05,4.34 169,5.62 c -5.06,1.28 -9.58,4.46 -12.33,9.23 L 141.63,40.9 126.59,66.95 c -2.76,4.78 -3.25,10.28 -1.83,15.3 1.42,5.02 4.77,9.55 9.68,12.39 z"
+       id="path16" />
+  </g>
+
+  </svg>

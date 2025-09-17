@@ -16,6 +16,7 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.Restriction.Restriction_Dictionary import rest_dict
 import dnachisel
 import pandas as pd
+from streamlit_scroll_navigation import scroll_navbar
 
 # add main directory to system path for imports
 current_dir = Path(__file__).resolve().parent
@@ -233,6 +234,9 @@ def change_theme() -> None:
         state.themes["current_theme"] = "dark"
 
 
+# Anchor IDs and icons
+anchor_ids = ["Ligand binding site", "Outer linker", "Transmembrane Domain", "Intracellular Component", "Downloads"]
+anchor_icons = [open("resources/imgs/ecd.svg").read(), open("resources/imgs/ecd_linker.svg").read(), open("resources/imgs/tmd.svg").read(), open("resources/imgs/intracellular_component.svg").read()]
 col1, col2 = st.columns([1, 0.1], vertical_alignment="bottom")
 with col1:
     st.title("MESA-Design Tool")
@@ -254,8 +258,10 @@ custom_binder: bool = st.toggle(
     "Custom Binder",
     value=False,
     key="custom_binder_toggle",
-    help="Enter custom chain sequences for MESA-Chains. These could result from a BindCraft run."
+    help="Enter custom chain sequences for MESA-Chains. These could result from a BindCraft run.",
 )
+
+st.header("Custom Binder Sequence" if custom_binder else "Find Binding Candidate", anchor="Ligand binding site")
 
 if not custom_binder:
     # columns for search field and search button
@@ -518,7 +524,6 @@ if state.pdbs and state.pdb_selection and not state.custom_binder_toggle:
 elif state.custom_binder_toggle:
     state.pdb_fasta = ""
 
-    st.header("Custom Binder Sequence")
     binder_chain_columns = st.columns(2)
 
     with binder_chain_columns[0]:
@@ -551,8 +556,14 @@ elif state.custom_binder_toggle:
 
 ### Build linker between Binder and TMD ################################################################################
 if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0:
+    with st.sidebar:
+        scroll_navbar(
+            anchor_ids,
+            anchor_labels=None, # Use anchor_ids as labels
+            anchor_icons=anchor_icons)
+
     st.divider()
-    st.header("Linker Design")
+    st.header("Linker Design", anchor="Outer linker")
 
     if len(state.chain_sequences["Chain A"]) < 1 and len(state.chain_sequences["Chain B"]) < 1:
         st.error("Select chains to create linkers")
@@ -617,7 +628,7 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
             help="Use a custom TMD sequence"
         )
 
-        st.header("TMD Picker" if not custom_tmd else "Custom TMD")
+        st.header("TMD Picker" if not custom_tmd else "Custom TMD", anchor = "Transmembrane Domain")
 
         if not custom_tmd:
             st.info("You can inform your TMD choice according to this [Paper](https://pubmed.ncbi.nlm.nih.gov/33392392/) and its [supplementary data](https://pmc.ncbi.nlm.nih.gov/articles/PMC7759213/#sup1).")
@@ -662,7 +673,7 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
 ### INTRACELLULAR PART DESIGNER ########################################################################################
 if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0:
     st.divider()
-    st.header("Intracellular Component")
+    st.header("Intracellular Component", anchor="Intracellular Component")
 
     # choose between custom and tev protease ICD
     custom_icd: bool = st.toggle(
@@ -1213,7 +1224,7 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                 height="content"
             )
 
-    st.header("Downloads")
+    st.header("Downloads", anchor="Downloads")
     download_container = st.container(border=True)
     with download_container:
         # assemble annotated constructs

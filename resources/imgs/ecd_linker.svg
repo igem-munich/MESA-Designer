@@ -1,0 +1,91 @@
+<svg
+   id="Layer_2"
+   data-name="Layer 2"
+   viewBox="0 96 200.02 40"
+   version="1.1"
+   sodipodi:docname="MESA.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview30"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="3.0305403"
+     inkscape:cx="-42.896641"
+     inkscape:cy="208.70866"
+     inkscape:window-width="2880"
+     inkscape:window-height="1728"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_2" />
+  <defs
+     id="defs4">
+    <style
+       id="style2">
+      .cls-1 {
+        fill: #e60082;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5 {
+        stroke-miterlimit: 10;
+        stroke-width: 10px;
+      }
+
+      .cls-1, .cls-3, .cls-4 {
+        stroke: #000;
+      }
+
+      .cls-2 {
+        stroke: #383c3b;
+      }
+
+      .cls-2, .cls-5 {
+        fill: none;
+      }
+
+      .cls-3 {
+        fill: #f6ae2c;
+      }
+
+      .cls-4 {
+        fill: #008dc9;
+      }
+
+      .cls-5 {
+        stroke: #a7afad;
+      }
+    </style>
+  </defs>
+<g
+     id="ecd_linker"
+     inkscape:label="ecd_linker">
+    <rect
+       style="fill:#de67a1;fill-opacity:1;stroke:#000000;stroke-width:0"
+       id="rect1238"
+       width="9.9999962"
+       height="40.087389"
+       x="45.010002"
+       y="96"
+       rx="0"
+       ry="0" />
+    <rect
+       style="fill:#de76a1;fill-opacity:1;stroke:#000000;stroke-width:0"
+       id="rect1242"
+       width="9.9999962"
+       height="40.087389"
+       x="145.00999"
+       y="96"
+       rx="0"
+       ry="0" />
+  </g>
+  </svg>

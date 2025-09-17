@@ -1,0 +1,120 @@
+<svg
+   id="Layer_2"
+   data-name="Layer 2"
+   viewBox="0 166 200.02 200.85"
+   version="1.1"
+   sodipodi:docname="MESA.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview30"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="3.0305403"
+     inkscape:cx="-42.896641"
+     inkscape:cy="208.70866"
+     inkscape:window-width="2880"
+     inkscape:window-height="1728"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_2" />
+  <defs
+     id="defs4">
+    <style
+       id="style2">
+      .cls-1 {
+        fill: #e60082;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5 {
+        stroke-miterlimit: 10;
+        stroke-width: 10px;
+      }
+
+      .cls-1, .cls-3, .cls-4 {
+        stroke: #000;
+      }
+
+      .cls-2 {
+        stroke: #de67a1;
+      }
+
+      .cls-2, .cls-5 {
+        fill: none;
+      }
+
+      .cls-3 {
+        fill: #f6ae2c;
+      }
+
+      .cls-4 {
+        fill: #008dc9;
+      }
+
+      .cls-5 {
+        stroke: #a7afad;
+      }
+    </style>
+  </defs>
+  <g
+     id="inner_linker"
+     inkscape:label="inner_linker">
+    <rect
+       style="fill:#de67a1;stroke:#000000;stroke-width:0;fill-opacity:1"
+       id="rect400"
+       width="9.9999962"
+       height="30.087389"
+       x="45.009998"
+       y="166.76262"
+       rx="0"
+       ry="0" />
+    <rect
+       style="fill:#de67a1;stroke:#000000;stroke-width:0;fill-opacity:1"
+       id="rect402"
+       width="9.9999962"
+       height="50.087391"
+       x="145.00999"
+       y="166.76262"
+       rx="0"
+       ry="0" />
+  </g>
+  <path
+     class="cls-1"
+     d="m 85.01,256.22 c -3.41,6.15 -8.4,11.31 -14.41,14.93 -6.01,3.62 -13.06,5.7 -20.59,5.7 -11.04,0 -21.04,-4.48 -28.28,-11.72 -7.24,-7.24 -11.72,-17.24 -11.72,-28.28 0,-11.04 4.48,-21.05 11.72,-28.28 7.24,-7.23 17.24,-11.72 28.28,-11.72 7.53,0 14.57,2.08 20.59,5.7 6.02,3.62 11,8.78 14.41,14.93 -4.31,1.11 -8.06,3.62 -10.73,7.02 -2.67,3.4 -4.27,7.69 -4.27,12.35 0,4.66 1.6,8.95 4.27,12.35 2.67,3.4 6.42,5.91 10.73,7.02 z"
+     id="tev"
+     inkscape:label="tev"
+     style="display:inline" />
+  <line
+     class="cls-2"
+     x1="150.00999"
+     y1="256.85001"
+     x2="150.00999"
+     y2="276.85001"
+     id="cargo_linker"
+     style="display:inline"
+     inkscape:label="cargo_linker" />
+  <circle
+     class="cls-1"
+     cx="150.00999"
+     cy="236.85001"
+     r="20"
+     id="prs"
+     inkscape:label="prs"
+     style="display:inline" />
+  <polygon
+     class="cls-3"
+     points="120.01,276.85 120.01,316.85 120.01,356.85 150.01,356.85 180.01,356.85 180.01,316.85 180.01,276.85 150.01,276.85 "
+     id="cargo"
+     inkscape:label="cargo"
+     style="display:inline" />
+</svg>
