@@ -636,7 +636,6 @@ if state.pdbs and state.pdb_selection and not state.custom_binder_toggle:
 elif state.custom_binder_toggle:
     state.pdb_fasta = "" # Clear PDB-derived FASTA as custom sequences are used.
 
-    st.header("Custom Binder Sequence")
     # Create two columns for Chain A and Chain B custom sequence input.
     binder_chain_columns = st.columns(2)
 
