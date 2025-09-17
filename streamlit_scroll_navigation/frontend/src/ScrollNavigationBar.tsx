@@ -4,7 +4,6 @@ import {
   withStreamlitConnection,
 } from "streamlit-component-lib";
 import React, { ReactNode } from "react";
-import "bootstrap-icons/font/bootstrap-icons.css";
 import { CSSProperties } from "react";
 
 interface State {
