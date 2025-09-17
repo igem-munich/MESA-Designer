@@ -16,7 +16,6 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.Restriction.Restriction_Dictionary import rest_dict
 import dnachisel
 import pandas as pd
-from streamlit_scroll_navigation import scroll_navbar
 
 # add main directory to system path for imports
 current_dir = Path(__file__).resolve().parent
@@ -27,6 +26,8 @@ sys.path.insert(0, str(project_root))
 from util.antibody_search import search_antibodies
 from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs, CHAIN_COLORS, SIGNAL_SEQS, TAG_SEQS
 from util.pdb_interaction import extract_chains_from_pdb, get_pdb_from_rcsb
+from streamlit_scroll_navigation import scroll_navbar
+
 
 # session state
 state = st.session_state
@@ -236,7 +237,7 @@ def change_theme() -> None:
 
 # Anchor IDs and icons
 anchor_ids = ["Ligand binding site", "Outer linker", "Transmembrane Domain", "Intracellular Component", "Downloads"]
-anchor_icons = [open("resources/imgs/ecd.svg").read(), open("resources/imgs/ecd_linker.svg").read(), open("resources/imgs/tmd.svg").read(), open("resources/imgs/intracellular_component.svg").read()]
+anchor_icons = [open("resources/imgs/ecd.svg").read(), open("resources/imgs/ecd_linker.svg").read(), open("resources/imgs/tmd.svg").read(), open("resources/imgs/intracellular_component.svg").read(), open("resources/imgs/download.svg").read()]
 col1, col2 = st.columns([1, 0.1], vertical_alignment="bottom")
 with col1:
     st.title("MESA-Design Tool")
