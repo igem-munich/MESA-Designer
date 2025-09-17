@@ -16,6 +16,7 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.Restriction.Restriction_Dictionary import rest_dict
 import dnachisel
 import pandas as pd
+from streamlit_downloader import downloader
 
 # Add the parent directory of the current file to sys.path
 # This allows for importing modules from the 'util' package.
@@ -1593,16 +1594,22 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                 )
 
         # Generate download data if constructs are available.
-        if state.construct_list_formatted:
-            generate_download()
 
         # Display download button if download data has been generated.
-        if state.download_data:
-            download: bool = st.download_button(
-                label="Download Selected",
-                key="download_selected",
-                icon=":material/download:",
-                data=state.download_data, # The BytesIO object containing the ZIP.
-                file_name="mesa-design.zip",
-                mime="application/zip"
+        if st.button("Start Download"):
+            generate_download()
+            download_complete: bool = downloader(
+                data=state.download_data,
+                filename="mesa-design.zip",
+                content_type="application/zip",
             )
+
+        #if state.download_data:
+        #    download: bool = st.download_button(
+        #        label="Download Selected",
+        #        key="download_selected",
+        #        icon=":material/download:",
+        #        data=state.download_data, # The BytesIO object containing the ZIP.
+        #        file_name="mesa-design.zip",
+        #        mime="application/zip"
+        #    )
