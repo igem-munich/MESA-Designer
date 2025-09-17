@@ -631,7 +631,7 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         st.header("TMD Picker" if not custom_tmd else "Custom TMD", anchor = "Transmembrane Domain")
 
         if not custom_tmd:
-            st.info("You can inform your TMD choice according to this [Paper](https://pubmed.ncbi.nlm.nih.gov/33392392/) and its [supplementary data](https://pmc.ncbi.nlm.nih.gov/articles/PMC7759213/#sup1).")
+            st.info("You can base your choice of TMDs on this [Paper](https://pubmed.ncbi.nlm.nih.gov/33392392/) and its [supplementary data](https://pmc.ncbi.nlm.nih.gov/articles/PMC7759213/#sup1).")
 
         tmd_sequence_cols = st.columns(len([chain_id for chain_id in state.chain_sequences if len(state.chain_sequences[chain_id]) > 0]))
 
