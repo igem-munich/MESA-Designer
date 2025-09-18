@@ -318,7 +318,7 @@ def change_theme() -> None:
 
 # Anchor IDs and icons
 anchor_ids = ["Ligand binding site", "Outer linker", "Transmembrane Domain", "Intracellular Component", "Downloads"]
-anchor_icons = [open("resources/imgs/ecd.svg").read(), open("resources/imgs/ecd_linker.svg").read(), open("resources/imgs/tmd.svg").read(), open("resources/imgs/intracellular_component.svg").read() if "split_protease_toggle_value" not in state or not state.split_protease_toggle_value else open("resources/imgs/split_tev.svg").read(), open("resources/imgs/download.svg").read()]
+anchor_icons = [open("resources/imgs/ecd.svg").read(), open("resources/imgs/ecd_linker.svg").read(), open("resources/imgs/tmd_cd28.svg").read() if "Chain A_tmd" in state.tmds and state.tmds["Chain A_tmd"] == TMD_DATA["CD28"][1] else open("resources/imgs/tmd.svg").read(), open("resources/imgs/split_tev.svg").read() if "split_protease_toggle_value" not in state or state.split_protease_toggle_value else open("resources/imgs/intracellular_component.svg").read(), open("resources/imgs/download.svg").read()]
 # Create two columns for the app title and theme change button.
 col1, col2 = st.columns([1, 0.1], vertical_alignment="bottom")
 with col1:
