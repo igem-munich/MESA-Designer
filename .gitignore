@@ -12,6 +12,4 @@
 /src/
 ReceptorsDB.db
 /experiment/
-/streamlit_scroll_navigation/__pycache__/
-/streamlit_scroll_navigation/frontend/node_modules/
-/streamlit_scroll_navigation/frontend/build/
+/streamlit_scroll_navigation/
