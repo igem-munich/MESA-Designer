@@ -1,0 +1,26 @@
+{
+  "PRS": [
+    "GAAAATCTTTACTTCCAG",
+    "ENLYFQ"
+  ],
+  "PRS(M)": [
+    "GAAAACCTGTATTTTCAGATG",
+    "ENLYFQM"
+  ],
+  "PRS(A)": [
+    "GAAAACCTGTATTTTCAGGCC",
+    "ENLYFQA"
+  ],
+  "PRS(K)": [
+    "GAAAACCTGTATTTTCAGAAG",
+    "ENLYFQK"
+  ],
+  "PRS(G)": [
+    "GAGAACCTGTATTTTCAGGGT",
+    "ENLYFQG"
+  ],
+  "PRS(Y)": [
+    "GAAAACCTTTATTTCCAATAC",
+    "ENLYFQY"
+  ]
+}
