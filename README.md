@@ -4,16 +4,22 @@
 The iGEM Munich 2025 MESA Designer Software Tool is an easy-to-use [MESA (Modular Extracellular Sensor Architecture for Engineering Mammalian Cell-based Devices)](https://pmc.ncbi.nlm.nih.gov/articles/PMC4161666/) design tool.
 The MESA Receptor Framework is a highly flexible and adaptable method for custom cellular circuit creation. The MESA Designer Tool provides a ... package for creation. Docker, Python package, webapp.
   
+TODOTODOTODO
+
+Wiki Link  
+Video Link  
+Youtube Link  
+
 For more details, visit our team wiki. The system offers:
 - Clear guidance through the MESA Receptor and ICD (Intracellular Domain) creation
-- REST API, Python (PyPi) Package, Containerized Dockersolutions and GitLab Repo based deployment
-- Great expanability through python
+- REST API, Python (PyPi) Package, Containerized Docker solutions and GitLab Repo-based deployment
+- Great expandability through python
 - A webapp and video guides
 - Standardized Genbank file output
 - SynBio specific and customizable sequence optimization
 
 ## Installation
-This tool has been designed and development with flexibility in mind. To achieve maximum compatibility many different solutions exist.
+This tool has been designed and developed with flexibility in mind. To achieve maximum compatibility, many different solutions exist.
 All installation methods are listed below. For a quick deployment we recommend following the **pre-build docker images** installation instructions.
 
 ### Pre-Built Docker Image
@@ -21,13 +27,13 @@ All installation methods are listed below. For a quick deployment we recommend f
 - docker: latest version. You can download and install this according to the official installation instructions: https://www.docker.com/products/docker-desktop/
 
 #### Steps
-1. You can preview pre-built docker images here [here](https://hub.docker.com/repository/docker/aeneastews/mesa-designer/general) and find a preferred version (we recommend the latest).
+1. You can preview pre-built docker images here[](https://hub.docker.com/repository/docker/aeneastews/mesa-designer/general) and find a preferred version (we recommend the latest).
 Note: For most versions there are different containers available: **all**, **webapp** and **api**.
-These can be denoted by their respective names ending in -all, -webapp and -api respectively. You can download (pull) the latest official from dockerhub version by running this command from the a commandline or terminal while docker is running on your system:
+These can be denoted by their respective names ending in -all, -webapp and -api respectively. You can download (pull) the latest official version from dockerhub by running this command from a commandline or terminal while docker is running on your system:
 ```
 docker pull aeneastews/mesa-designer:latest
 ```
-2. This image can be started by running the following command from a commandline or terminal while docker is running on you system:
+2. This image can be started by running the following command from a commandline or terminal while docker is running on your system:
 ```
 docker run -p 8501:8501 -p 8000:8000 aeneastews/mesa-designer:latest
 ```
@@ -52,7 +58,7 @@ docker run -p 8501:8501 -p 8000:8000 mesa-designer
 ### Local Installation
 #### Requirements
 - python: version=3.13.x. You can download and install this according to the official installation guides: https://www.python.org/downloads/. It may already be installed, you can check this by running `python --version` from a commandline or terminal.
-- git: This is recommended for cloning the repository though not strictly necessary. This will however enable easy updates to future versions.
+- git: This is recommended for cloning the repository, though not strictly necessary. This will, however, enable easy updates to future versions.
 
 #### Steps
 1. Download or clone the repository:  
@@ -63,13 +69,13 @@ git clone https://gitlab.igem.org/2025/software-tools/munich.git
 cd munich
 ```
 
-2. Running the tool requires a few dependencies. To keep these separated you should create a [python virtual environment](https://docs.python.org/3/library/venv.html). 
+2. Running the tool requires a few dependencies. To keep these separated, you should create a [python virtual environment](https://docs.python.org/3/library/venv.html). 
 This can be done by running this command from a commandline or terminal. 
 Note: you should do this inside the munich directory which was downloaded during the previous step:
 ```
 python -m venv .venv
 ```
-3. To install the required packages in the virtual environment it has to be activated first.
+3. To install the required packages in the virtual environment, it has to be activated first.
 ```
 On Windows run this command from the munich directory:
 .\.venv\Scripts\activate
@@ -82,11 +88,11 @@ The required packages will be automatically installed and setup via this command
 pip install -r requirements.txt
 ```
 4. The MESA Designer tool is based on validated experimental data from multiple databases.
-This data can be automatically setup using the included setup.py script. Please run it using:
+This data can be automatically set up using the included setup.py script. Please run it using:
 ```
 python setup.py
 ```
-5. Since the system comes with two available services you can start these individually to your liking.
+5. Since the system comes with two available services, you can start these individually to your liking.
 Starting the webapp can be achieved by running the following command from a commandline or terminal:
 ```
 On Windows run this command from the munich directory:
@@ -95,9 +101,14 @@ streamlit run .\app\main.py
 On Mac OS or Linux run this command from the munich directory:
 streamlit run ./app/main.py
 ```
+6. Starting the API does not require the webapp to be running, however, if you wish to start both at the same time, we recommend doing so in a new commandline or terminal window.
+From the munich directory run the following command:
+```
+uvicorn api.main:app
+```
 
 ### Python (PyPi) Package
-For easy integration with custom projects the python package provides extended features, low-level control and complete documention.
+For easy integration with custom projects, the python package provides extended features, low-level control and complete documentation.
 This method is intended to be used by developers seeking to integrate MESA functionality into their project.
 
 #### Requirements
@@ -112,9 +123,51 @@ pip install mesa-designer
 
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of
-usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably
-include in the README.
+
+### Webapp & API
+Depending on your specific choice, you may have started different parts of the toolkit. This means that if you are running the local installation, you can choose which parts to run, and if you download a pre-built docker image, you will have different options available depending on your choice:
+- -all: both
+- -webapp: webapp
+- -api: api  
+
+Regardless of your choice, by default, the webapp can be accessed at: http://localhost:8501/ and the API at: http://localhost:8000/.
+To get an overview of all API endpoints and their specific schemas, navigate to: http://localhost:8000/docs. This also provides you with the ability to try out all endpoints.
+
+### Python Package
+The python package can be used by importing it wherever necessary: 
+```
+import mesa_designer
+```
+
+Despite its extensive functionality, it is straightforward to use. Please check out the extensive annotation in the package's files and functions.
+Some examples are provided here:
+
+Getting an overview of preselected parts and components:
+```python
+from mesa_designer import ALL_DATA
+
+print(ALL_DATA)
+```
+
+Building a new MESA chain, appending a few components and exporting it to an annotated genbank file:
+```python
+from mesa_designer.mesa import *
+
+# create a new chain object
+chain = MesaChain()
+
+# add a custom binder design, this might be the result of a bindcraft https://github.com/martinpacesa/BindCraft run
+chain.add_binder(sequence="BINDERSEQUENCE")
+
+# add a default mesa tmd linker, this is a preconfigured linker, however the add_tmd_linker function and other linker functions provide extensive flexibility and customizability
+chain.add_tmd_linker()
+
+# the mutated TEVp N-Terminal end is a well-known and widely used N-Terminal end of a split TEV protease
+chain.add_protease(protease_name="NTEVp_H75S")
+
+# finally save the constructed mesa chain to an annotated genbank file
+chain.save_genbank_file("mesa_chain.gb")
+```
 
 ## Contributing
 State if you are open to contributions and what your requirements are for accepting them.
@@ -128,7 +181,10 @@ the likelihood that the changes inadvertently break something. Having instructio
 helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
 
 ## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Show your appreciation to those who have contributed to the project.  
+streamlit  
+mesa papers  
+biopython
 
 ## Design Outline
 [Design Doc](https://docs.google.com/document/d/1ciPsgLo5JNp7wKqFREEnWSCiShK2ZrRBRCNdM3VBm_A/edit?tab=t.0)
