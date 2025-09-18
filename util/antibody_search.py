@@ -12,9 +12,20 @@ file_priority_list: list[str] = ["imgt", "chothia", "raw", "skempi", "abdb"] # D
 skempi_pdbs: set[str] = set([x[:5] for x in list(skempi_df["#Pdb"])]) # Strips extra annotation of skempi pdb files to be compatible with regular pdb ids.
 
 def get_highest_priority_path(list_of_paths: list[Path], priority_list: list[str]) -> Path | None: # Defines a function to get the highest priority file path from a list, based on a given priority list of keywords.
+    """
+    "Function which gets a file path from a list of paths according to a list of keywords where the keywords' indices represent their priority.
+    :param list_of_paths: A list of file paths
+    :param priority_list: An ordered list of keywords indicating priority
+    :return: None
+    """
     priority_map: dict[str, int] = {keyword: i for i, keyword in enumerate(priority_list)} # Creates a dictionary mapping keywords from the priority_list to their integer priorities (lower number means higher priority).
 
     def get_file_priority(file_path: Path) -> int: # Defines a nested helper function to determine the priority of a given file path.
+        """
+        This nested helper function assigns a priority to a path based on the input priority list.
+        :param file_path:
+        :return:
+        """
         for keyword, priority in priority_map.items(): # Iterates through the keyword-priority pairs in the priority_map.
             if keyword in file_path.name.lower(): # Checks if the keyword is present in the lowercase version of the file path. #TODO: might be a bug (checks name instead of path)
                 return priority # Returns the priority if a matching keyword is found.
@@ -24,7 +35,14 @@ def get_highest_priority_path(list_of_paths: list[Path], priority_list: list[str
 
     return sorted_paths[0] if sorted_paths else None # Returns the first path in the sorted list (highest priority), or None if the list is empty.
 
+# TODO: re-implement structure filtering
 def search_antibodies(antigen: str, filter_structures: bool=True) -> tuple[pd.DataFrame, dict[str, pd.DataFrame], dict[str, str | Path], datetime.timedelta]: # Defines a function to search for antibodies based on an antigen, with an option to filter structures.
+    """
+    This function searches multiple databases based on the input search term / antigen name and returns found data from sabdab and skempi databases. It also searches for local structures and returns the search time.
+    :param antigen: The search term or antigen name
+    :param filter_structures: To filter duplicate structures
+    :return: Search results
+    """
     time: datetime.datetime = datetime.datetime.now() # Records the current time to measure the search duration.
     sabdab_selection: pd.DataFrame = sabdab_df.loc[sabdab_df["antigen_name"].str.contains(antigen, case=False) | # Selects rows from sabdab_df where the 'antigen_name' column (case-insensitive)
                                      sabdab_df["compound"].str.contains(antigen, case=False)].sort_values("affinity") # or 'compound' column contains the given antigen, then sorts by 'affinity'.
@@ -66,6 +84,11 @@ def search_antibodies(antigen: str, filter_structures: bool=True) -> tuple[pd.Da
     return sabdab_selection, skempi_selection, pdb_files, datetime.datetime.now()-time # Returns the SABDAB selection, SKEMPI selection, PDB file paths, and the duration of the search.
 
 def search_antibodies_api(antigen: str) -> dict[str, list[dict[str, str]] | float]: # Defines a function for searching antibodies, intended for API use, returning results as a dictionary.
+    """
+    API wrapper function around the search_antibodies function
+    :param antigen: The search term / antigen name
+    :return: Search data
+    """
     sabdab_selection, skempi_selection, pdb_files, search_duration = search_antibodies(antigen) # Calls the main search_antibodies function to get the results.
 
     # convert sabdab to dict
