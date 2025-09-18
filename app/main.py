@@ -318,7 +318,7 @@ def change_theme() -> None:
 
 # Anchor IDs and icons
 anchor_ids = ["Ligand binding site", "Outer linker", "Transmembrane Domain", "Intracellular Component", "Downloads"]
-anchor_icons = [open("resources/imgs/ecd.svg").read(), open("resources/imgs/ecd_linker.svg").read(), open("resources/imgs/tmd_cd28.svg").read() if "Chain A_tmd" in state.tmds and state.tmds["Chain A_tmd"] == TMD_DATA["Valine"][1] else open("resources/imgs/tmd.svg").read(), open("resources/imgs/split_tev.svg").read() if "split_protease_toggle_value" not in state or state.split_protease_toggle_value else open("resources/imgs/intracellular_component.svg").read(), open("resources/imgs/download.svg").read()]
+anchor_icons = [open("resources/imgs/ecd.svg").read(), open("resources/imgs/ecd_linker.svg").read(), open("resources/imgs/tmd_cd28.svg").read() if hasattr(state, "A_tmd_selection") and state.A_tmd_selection == "Valine" else open("resources/imgs/tmd.svg").read(), open("resources/imgs/split_tev.svg").read() if "split_protease_toggle_value" not in state or state.split_protease_toggle_value else open("resources/imgs/intracellular_component.svg").read(), open("resources/imgs/download.svg").read()]
 # Create two columns for the app title and theme change button.
 col1, col2 = st.columns([1, 0.1], vertical_alignment="bottom")
 with col1:
@@ -781,7 +781,7 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                         options=TMD_DATA.keys(), # Options are keys from the TMD_DATA dictionary.
                         horizontal=True,
                         label_visibility="collapsed",
-                        key=f"{chain_id}_tmd_selection"
+                        key=f"{chain_id[-1]}_tmd_selection"
                     )
                     # Display the sequence of the selected pre-defined TMD.
                     st.code(
@@ -799,7 +799,7 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                         key=f"{chain_id}_tmd_sequence"
                     )
             # Store the selected/entered TMD sequence in session state.
-            state.tmds[f"{chain_id}_tmd"] = TMD_DATA[state[f"{chain_id}_tmd_selection"]][1] if not custom_tmd else state[f"{chain_id}_tmd_sequence"]
+            state.tmds[f"{chain_id}_tmd"] = TMD_DATA[state[f"{chain_id[-1]}_tmd_selection"]][1] if not custom_tmd else state[f"{chain_id}_tmd_sequence"]
 
     else:
         state.tmds.clear() # Clear TMDs if transmembrane design is disabled.
