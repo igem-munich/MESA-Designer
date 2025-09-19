@@ -316,6 +316,12 @@ def change_theme() -> None:
     elif previous_theme == "light":
         state.themes["current_theme"] = "dark"
 
+
+# cache version of get_pdb_from_rcsb
+@st.cache_data
+def get_cached_pdb_from_rcsb(pdb_id: str) -> str | None:
+    return get_pdb_from_rcsb(pdb_id)
+
 # Anchor IDs and icons
 anchor_ids = ["Ligand binding site", "Outer linker", "Transmembrane Domain", "Intracellular Component", "Downloads"]
 anchor_icons = [open("resources/imgs/ecd.svg").read(), open("resources/imgs/ecd_linker.svg").read(), open("resources/imgs/tmd_cd28.svg").read() if hasattr(state, "A_tmd_selection") and state.A_tmd_selection == "Valine" else open("resources/imgs/tmd.svg").read(), open("resources/imgs/split_tev.svg").read() if "split_protease_toggle_value" not in state or state.split_protease_toggle_value else open("resources/imgs/intracellular_component.svg").read(), open("resources/imgs/download.svg").read()]
@@ -439,7 +445,7 @@ if state.sabdab is not None and not state.custom_binder_toggle:
             # Get the PDB ID from the selected row in the dataframe.
             state.pdb_selection = state.sabdab.iloc[selection["selection"]["rows"]]["pdb"].to_numpy()[0]
             # Retrieve the PDB file content from RCSB PDB.
-            state.current_pdb = get_pdb_from_rcsb(state.pdb_selection)
+            state.current_pdb = get_cached_pdb_from_rcsb(state.pdb_selection)
         except:
             # Handle cases where no row is selected or an error occurs.
             state["pdb_selection"] = 0
