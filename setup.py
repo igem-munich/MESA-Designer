@@ -53,10 +53,10 @@ if Path("./files/done.txt").exists():
 offline_mode: bool = False # input("Would you like to use this offline? Note: requires 55GB download
 
 # create dictionaries for databases
-Path.mkdir(Path("./data"))
+Path.mkdir(Path("./data"), exist_ok=True)
 
 if offline_mode:
-    Path.mkdir(Path("./files"))
+    Path.mkdir(Path("./files"), exist_ok=True)
 
 # Section for downloading the SABDAB database and setting up its SQLite database
 print("Downloading sabdab database and creating sqlite database...")
@@ -146,7 +146,7 @@ if offline_mode:
     os.rename(Path("./files/abdb_newdata_20240706"), Path("./files/abdb_structures"))
 
     # move chothia files to separate directory
-    Path.mkdir(Path("./files/abdb_structures/chothia"))
+    Path.mkdir(Path("./files/abdb_structures/chothia"), exist_ok=True)
     for path in Path("./files/abdb_structures").glob("*.cho"):
         shutil.move(path, path.parent / "chothia")
 
