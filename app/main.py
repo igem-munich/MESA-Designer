@@ -526,7 +526,7 @@ if state.sabdab is not None and not state.custom_binder_toggle:
 if state.pdbs and state.pdb_selection and not state.custom_binder_toggle:
     st.header("Inspect Structures")
     # Create columns for PDB display: left sidebar (0.2), main viewer (1), right sidebar (0.2).
-    pdb_cols = st.columns([0.2, 1, 0.2])
+    pdb_cols = st.columns([0.3, 1, 0.2])
 
     # Display radio selection and chain/residue selection
     with pdb_cols[0]:
@@ -592,7 +592,7 @@ if state.pdbs and state.pdb_selection and not state.custom_binder_toggle:
     with pdb_cols[1]:
         # Display selected residues using py3Dmol visualization library.
         # Create a py3Dmol viewer instance with a dynamic width and fixed height.
-        view = py3Dmol.view(width=page_width*.71, height=500)
+        view = py3Dmol.view(width=page_width*.66, height=500)
         # Set the background color of the viewer based on the current theme.
         view.setBackgroundColor(state.themes[state.themes["current_theme"]]["theme.backgroundColor"])
 
