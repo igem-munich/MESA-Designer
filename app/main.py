@@ -15,8 +15,8 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.Restriction.Restriction_Dictionary import rest_dict
 import dnachisel
-import pandas as pd
 from streamlit_downloader import downloader
+from streamlit_scroll_navigation import scroll_navbar
 
 # Add the parent directory of the current file to sys.path
 # This allows for importing modules from the 'util' package.
@@ -28,8 +28,6 @@ sys.path.insert(0, str(project_root))
 from util.antibody_search import search_antibodies
 from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs, CHAIN_COLORS, SIGNAL_SEQS, TAG_SEQS
 from util.pdb_interaction import extract_chains_from_pdb, get_pdb_from_rcsb
-
-from streamlit_scroll_navigation import scroll_navbar
 
 
 # Initialize Streamlit's session state.
