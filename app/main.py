@@ -586,6 +586,9 @@ if state.pdbs and state.pdb_selection and not state.custom_binder_toggle:
             label_visibility="collapsed"
         )
 
+        # link to rcsb for more information
+        st.info(f"View on [RCSB PDB](https://www.rcsb.org/structure/{state.pdb_selection})")
+
     with pdb_cols[1]:
         # Display selected residues using py3Dmol visualization library.
         # Create a py3Dmol viewer instance with a dynamic width and fixed height.
