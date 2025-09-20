@@ -8,8 +8,8 @@ services:
     image: mesa-designer
     container_name: mesa-designer
     restart: unless-stopped
-    cpus: "1.2"
-    mem_limit: "3g"
+    cpus: "1.0"
+    mem_limit: "2g"
     logging:
       driver: "json-file"
       options:
