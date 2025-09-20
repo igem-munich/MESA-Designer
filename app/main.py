@@ -367,9 +367,6 @@ def update_scroll_navigation(transmembrane_design: bool, split_design: bool, pro
     return anchor_ids, anchor_icons
 
 # Anchor IDs and icons for sidebar scroll navigation
-print(f"transmembrane_mesa in state: {'transmembrane_mesa' in state}")
-if "transmembrane_mesa" in state:
-    print(state.transmembrane_mesa)
 anchor_ids, anchor_icons = update_scroll_navigation(transmembrane_design=(("transmembrane_mesa" in state and state.transmembrane_mesa) or "transmembrane_mesa" not in state),
                                                     split_design=(("split_protease_toggle" in state and state.split_protease_toggle) or "split_protease_toggle" not in state),
                                                     protease_release_design=("release_protease_toggle" in state and state.release_protease_toggle),
