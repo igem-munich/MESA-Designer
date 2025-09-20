@@ -20,7 +20,7 @@ For more details, visit our team wiki. The system offers:
 
 ## Installation
 This tool has been designed and developed with flexibility in mind. To achieve maximum compatibility, many different solutions exist.
-All installation methods are listed below. For a quick deployment we recommend following the **pre-build docker images** installation instructions.
+All installation methods are listed below. For a quick deployment we recommend following the **pre-built docker images** installation instructions.
 
 ### Pre-Built Docker Image
 #### Requirements
