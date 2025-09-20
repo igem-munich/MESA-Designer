@@ -320,9 +320,18 @@ def change_theme() -> None:
 def get_cached_pdb_from_rcsb(pdb_id: str) -> str | None:
     return get_pdb_from_rcsb(pdb_id)
 
-# Anchor IDs and icons
+# Anchor IDs and icons for sidebar scroll navigation
 anchor_ids = ["Ligand binding site", "Outer linker", "Transmembrane Domain", "Intracellular Component", "Downloads"]
 anchor_icons = [open("resources/imgs/ecd.svg").read(), open("resources/imgs/ecd_linker.svg").read(), open("resources/imgs/tmd_cd28.svg").read() if hasattr(state, "A_tmd_selection") and state.A_tmd_selection == "Valine" else open("resources/imgs/tmd.svg").read(), open("resources/imgs/split_tev.svg").read() if "split_protease_toggle_value" not in state or state.split_protease_toggle_value else open("resources/imgs/intracellular_component.svg").read(), open("resources/imgs/download.svg").read()]
+
+with st.sidebar:
+    scroll_navbar(
+        anchor_ids,
+        anchor_labels=None,  # Use anchor_ids as labels
+        anchor_icons=anchor_icons,
+        auto_update_anchor=True
+    )
+
 # Create two columns for the app title and theme change button.
 col1, col2 = st.columns([1, 0.1], vertical_alignment="bottom")
 with col1:
@@ -680,12 +689,6 @@ elif state.custom_binder_toggle:
 ### Build linker between Binder and TMD ################################################################################
 # This section is enabled if either Chain A or Chain B has a sequence (either from PDB or custom).
 if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0:
-    with st.sidebar:
-        scroll_navbar(
-            anchor_ids,
-            anchor_labels=None, # Use anchor_ids as labels
-            anchor_icons=anchor_icons)
-
     st.divider() # Add a visual divider.
     st.header("Linker Design", anchor="Outer linker")
 
