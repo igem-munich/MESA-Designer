@@ -318,15 +318,69 @@ def change_theme() -> None:
 # cache version of get_pdb_from_rcsb
 @st.cache_data
 def get_cached_pdb_from_rcsb(pdb_id: str) -> str | None:
+    """
+    This function is simply a wrapper around the get_pdb_from_rcsb function which provides streamlit caching
+    :param pdb_id: the pdb id to search for
+    :return: the pdb file's content or None
+    """
     return get_pdb_from_rcsb(pdb_id)
 
+
+# update scroll navigation
+@st.cache_data
+def update_scroll_navigation(transmembrane_design: bool, split_design: bool, protease_release_design: bool, cargo_release_design: bool, valine_design: bool) -> tuple[dict[str, str], list[str]]:
+    """
+    Due to infrequent updates this function caches its output, this, however, requires all relevant parameters to be passed in.
+    :param transmembrane_design: Intracellular Mesa or transmembrane design.
+    :param split_design: Split design or different chain design.
+    :param protease_release_design: Should the protease cut itself free?
+    :param cargo_release_design: Should the cargo be released or stay attached to the protease?
+    :param valine_design: is valine currently selected on the A-Mesa chain strand
+    :return: A tuple of page anchors and respective Icons for the sidebar.
+    """
+    # set anchor ids
+    # initialize constant anchors
+    anchor_ids = {"binder": "Ligand binding site",
+                  "linker": "Outer linker",
+                  "tmd": "Transmembrane Domain",
+                  "icd": "Intracellular Component",
+                  "download": "Downloads"}
+
+    # initialize images
+    anchor_icons = [open("resources/imgs/ecd.svg").read(),  # binder image
+                    open("resources/imgs/ecd_linker.svg").read(),  # linker image
+                    ]
+
+    # conditionally change outer linker to Linker and remove tmd
+    if not transmembrane_design:
+        anchor_ids["linker"] = "Linker"
+        anchor_ids.pop("tmd")
+
+    else: # insert tmd if selected
+        anchor_icons.append(open(f"resources/imgs/tmd{'_valine' if valine_design else ''}.svg").read())  # insert correct tmd image between ecd_linker and next component
+
+    # insert correct icd image
+    anchor_icons.append(open(f"resources/imgs/{'split_tev' if split_design else 'complete_tev'}_{'no_protease_release' if not protease_release_design else 'protease_release'}_{'cargo_release' if cargo_release_design else 'no_cargo_release'}.svg").read())
+
+    # add download image
+    anchor_icons.append(open("resources/imgs/download.svg").read())
+    return anchor_ids, anchor_icons
+
 # Anchor IDs and icons for sidebar scroll navigation
-anchor_ids = ["Ligand binding site", "Outer linker", "Transmembrane Domain", "Intracellular Component", "Downloads"]
-anchor_icons = [open("resources/imgs/ecd.svg").read(), open("resources/imgs/ecd_linker.svg").read(), open("resources/imgs/tmd_cd28.svg").read() if hasattr(state, "A_tmd_selection") and state.A_tmd_selection == "Valine" else open("resources/imgs/tmd.svg").read(), open("resources/imgs/split_tev.svg").read() if "split_protease_toggle_value" not in state or state.split_protease_toggle_value else open("resources/imgs/intracellular_component.svg").read(), open("resources/imgs/download.svg").read()]
+print(f"transmembrane_mesa in state: {'transmembrane_mesa' in state}")
+if "transmembrane_mesa" in state:
+    print(state.transmembrane_mesa)
+anchor_ids, anchor_icons = update_scroll_navigation(transmembrane_design=(("transmembrane_mesa" in state and state.transmembrane_mesa) or "transmembrane_mesa" not in state),
+                                                    split_design=(("split_protease_toggle" in state and state.split_protease_toggle) or "split_protease_toggle" not in state),
+                                                    protease_release_design=("release_protease_toggle" in state and state.release_protease_toggle),
+                                                    cargo_release_design=(("release_cargo_toggle" in state and state.release_cargo_toggle) or "release_cargo_toggle" not in state),
+                                                    valine_design=("A_tmd_selection" in state and state.A_tmd_selection == "Valine"))
+
+# TODO: create all possible mesa icd svgs
 
 with st.sidebar:
     scroll_navbar(
-        anchor_ids,
+        list(anchor_ids.values()),
         anchor_labels=None,  # Use anchor_ids as labels
         anchor_icons=anchor_icons,
         auto_update_anchor=True
@@ -690,7 +744,7 @@ elif state.custom_binder_toggle:
 # This section is enabled if either Chain A or Chain B has a sequence (either from PDB or custom).
 if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0:
     st.divider() # Add a visual divider.
-    st.header("Linker Design", anchor="Outer linker")
+    st.header("Linker Design", anchor=anchor_ids["linker"])
 
     # Display an error if no chains have been selected/provided.
     if len(state.chain_sequences["Chain A"]) < 1 and len(state.chain_sequences["Chain B"]) < 1:
