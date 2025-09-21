@@ -49,7 +49,7 @@ if "linkers" not in state: # Dictionary to store TMD-binder linker sequences per
 if "pdb_fasta" not in state: # Stores FASTA format sequences extracted from selected PDB chains
     state.pdb_fasta = None
 if "current_pdb_chains_data" not in state: # Stores extracted data (sequences, IDs) for each chain of the selected PDB
-    state.current_pdb_chains_data = []
+    state.current_pdb_chains_data = {}
 if "highlight_selection" not in state: # Dictionary to store residue selections for highlighting in the 3D viewer (per chain)
     state.highlight_selection = {}
 if "prev_pdb_selection" not in state: # Stores the previously selected PDB ID to detect changes
@@ -121,18 +121,14 @@ def update_chain_highlight_selection(chain_id_to_toggle: str, current_pdb_select
     """
     # Construct the unique key for the checkbox based on PDB and chain ID.
     checkbox_key: str = f"{current_pdb_selection}_checkbox_chain_{chain_id_to_toggle}"
-    # Extract chain data from the currently selected PDB to get chain lengths.
-    pdb_chain_data: list[dict[str, str]] = extract_chains_from_pdb(file_content=state.current_pdb)
-    # Create a dictionary mapping chain IDs to their full lengths.
-    lengths: dict[str, int] = {chain_data["chain_id"]: len(chain_data["sequence"]) for chain_data in pdb_chain_data}
 
-    if state[checkbox_key]:  # If the checkbox is now checked
-        if chain_id_to_toggle not in state.highlight_selection: # If the chain is not already in the selection, add it.
+    if state[checkbox_key] and chain_id_to_toggle not in state.highlight_selection: #If the checkbox is now checked and if the chain is not already in the selection, add it.
             # Select the entire range of residues for the chain (1-based indexing).
-            state.highlight_selection[chain_id_to_toggle] = list(range(1, lengths[chain_id_to_toggle] + 1))
-    else:  # If the checkbox is now unchecked
-        if chain_id_to_toggle in state.highlight_selection: # If the chain is in the selection, remove it.
-            del state.highlight_selection[chain_id_to_toggle]
+            state.highlight_selection[chain_id_to_toggle] = list(range(state.current_pdb_chains_data[chain_id_to_toggle]["start"], state.current_pdb_chains_data[chain_id_to_toggle]["end"] + 1))
+            print(f"start:::    {state.current_pdb_chains_data[chain_id_to_toggle]['start']}")
+            print(f"sequence:::    {state.current_pdb_chains_data[chain_id_to_toggle]['sequence']}")
+    elif chain_id_to_toggle in state.highlight_selection: # If the checkbox is now unchecked and if the chain is in the selection, remove it.
+        del state.highlight_selection[chain_id_to_toggle]
 
 
 def update_chain_highlight_selection_residues(chain_id_to_change: str, current_pdb_selection: str) -> None:
@@ -535,9 +531,9 @@ if state.pdbs and state.pdb_selection and not state.custom_binder_toggle:
 
             # Generate colors for each chain for visualization.
             state.chain_colors = {}
-            for chain_data in state.current_pdb_chains_data:
+            for chain_id in state.current_pdb_chains_data.keys():
                 # Assign a color from a predefined list (CHAIN_COLORS) to each chain ID.
-                state.chain_colors[chain_data["chain_id"]] = list(state.chain_colors.values())
+                state.chain_colors[chain_id] = list(state.chain_colors.values())
             prev_pdb_selection = state.pdb_selection # Update previous selection after processing.
         elif prev_pdb_selection:
             state.pdb_selection = prev_pdb_selection # Restore previous selection if current is empty.
@@ -545,9 +541,7 @@ if state.pdbs and state.pdb_selection and not state.custom_binder_toggle:
         # Chain selection UI.
         st.subheader("Select Chains")
         # Create checkboxes for each chain found in the PDB.
-        for chain_info in state.current_pdb_chains_data:
-            chain_id: str = chain_info["chain_id"]
-
+        for chain_id in state.current_pdb_chains_data.keys():
             # Create sub-columns for chain checkbox and residue input.
             col_pdb_selection_left, col_pdb_selection_right = st.columns(
                 2, vertical_alignment="bottom")
@@ -636,19 +630,14 @@ if state.pdbs and state.pdb_selection and not state.custom_binder_toggle:
             {"header": "Components", "items": []} # Container for available PDB chains
         ]
 
-        # Get detailed PDB chain data.
-        pdb_data: list[dict[str, str]] = extract_chains_from_pdb(file_content=state.current_pdb)
-
         # Iterate through PDB entries and add selected chains/residues to the FASTA string.
-        for chain_data in pdb_data:
-            if chain_data["chain_id"] in state.highlight_selection.keys():
-                chain_id = chain_data["chain_id"]
-                selection = state.highlight_selection[chain_id]
-                fasta += f">{chain_id}\n"
-                # Extract the sequence slice based on selected residues (1-based to 0-based conversion).
-                fasta += f"{chain_data['sequence'][selection[0] - 1:selection[-1]]}\n"
+        for chain_id in state.highlight_selection.keys():
+            selection = state.highlight_selection[chain_id]
+            fasta += f">{chain_id}\n"
+            # Extract the sequence slice based on selected residues (1-based to 0-based conversion).
+            fasta += f"{state.current_pdb_chains_data[chain_id]['sequence'][selection[0] - state.current_pdb_chains_data[chain_id]['start']:selection[-1] - state.current_pdb_chains_data[chain_id]["start"] + 1]}\n"
 
-                items[2]["items"].append(chain_id) # Add the chain to the 'Components' list for sorting.
+            items[2]["items"].append(chain_id) # Add the chain to the 'Components' list for sorting.
 
         # Remove the last newline character from the FASTA string.
         fasta = fasta[:-1]
@@ -676,31 +665,23 @@ if state.pdbs and state.pdb_selection and not state.custom_binder_toggle:
 
         # Assemble the sequence for "Chain A" based on user's sorted selection.
         for i, chain_id in enumerate(sorted_chains[0]["items"]):
-            for chain_data in state.current_pdb_chains_data:
-                if not chain_id == chain_data["chain_id"]:
-                    continue
+            selection = state.highlight_selection[chain_id]
+            # Append the selected chain's sequence segment to Chain A.
+            state.chain_sequences["Chain A"] += state.current_pdb_chains_data[chain_id]["sequence"][selection[0] - state.current_pdb_chains_data[chain_id]["start"]:selection[-1] - state.current_pdb_chains_data[chain_id]["start"] + 1]
 
-                selection = state.highlight_selection[chain_id]
-                # Append the selected chain's sequence segment to Chain A.
-                state.chain_sequences["Chain A"] += chain_data["sequence"][selection[0] - 1:selection[-1]]
-
-                # Add a linker sequence between chains, except after the last one.
-                if i < len(sorted_chains[0]["items"]) - 1:
-                    state.chain_sequences["Chain A"] += ("GGGGS" * 3) # A common flexible linker.
+            # Add a linker sequence between chains, except after the last one.
+            if i < len(sorted_chains[0]["items"]) - 1:
+                state.chain_sequences["Chain A"] += ("GGGGS" * 3) # A common flexible linker.
 
         # Assemble the sequence for "Chain B" based on user's sorted selection.
         for i, chain_id in enumerate(sorted_chains[1]["items"]):
-            for chain_data in state.current_pdb_chains_data:
-                if not chain_id == chain_data["chain_id"]:
-                    continue
+            selection = state.highlight_selection[chain_id]
+            # Append the selected chain's sequence segment to Chain B.
+            state.chain_sequences["Chain B"] += state.current_pdb_chains_data[chain_id]["sequence"][selection[0] - state.current_pdb_chains_data[chain_id]["start"]:selection[-1] - state.current_pdb_chains_data[chain_id]["start"] + 1]
 
-                selection = state.highlight_selection[chain_id]
-                # Append the selected chain's sequence segment to Chain B.
-                state.chain_sequences["Chain B"] += chain_data["sequence"][selection[0] - 1:selection[-1]]
-
-                # Add a linker sequence between chains, except after the last one.
-                if i < len(sorted_chains[1]["items"]) - 1:
-                    state.chain_sequences["Chain B"] += ("GGGGS" * 5) # A common flexible linker.
+            # Add a linker sequence between chains, except after the last one.
+            if i < len(sorted_chains[1]["items"]) - 1:
+                state.chain_sequences["Chain B"] += ("GGGGS" * 5) # A common flexible linker.
 
 # This section is activated if the "Custom Binder" toggle is enabled.
 elif state.custom_binder_toggle:
@@ -1674,3 +1655,5 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         #        file_name="mesa-design.zip",
         #        mime="application/zip"
         #    )
+
+print(state.highlight_selection)

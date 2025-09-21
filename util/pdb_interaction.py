@@ -4,37 +4,31 @@ import re
 import requests
 
 
-def extract_chains_from_pdb(file_path: str | None = None, file_content: str | None = None) -> list[dict[str, str]]:
+def extract_chains_from_pdb(file_path: str | None = None, file_content: str | None = None) -> dict[str, dict[str, str | int]]:
     """
     Extracts chain data (ID, chain ID, FASTA name, sequence) from a PDB file, either from a file path or direct content.
     :param file_path: The path to the PDB file.
     :param file_content: The content of the PDB file as a string.
     :return: A list of dictionaries, where each dictionary represents a chain with its 'id', 'chain_id', 'fasta_name', and 'sequence'.
     """
-    chains_data: list[dict[str, str]] = []
     try:
+        chains_data: dict[str, dict[str, str]] = {}
         records = SeqIO.parse(StringIO(file_content) if file_content else file_path, "pdb-atom")
         for record in records:
-            if ":" in record.id:
-                chain_id_display = record.id.split(":")[-1]
-            else:
-                if record.id and record.id[-1].isalpha():
-                    chain_id_display = record.id[-1]
-                else:
-                    chain_id_display = record.id
-
             fasta_name: str = re.sub("[^a-zA-Z0-9]", "", record.id.replace(":", "_"))
 
-            chains_data.append({
+            chains_data[record.annotations["chain"]] = {
                 "id": record.id,
-                "chain_id": chain_id_display,
+                "chain_id": record.annotations["chain"],
                 "fasta_name": fasta_name,
-                "sequence": str(record.seq)
-            })
-    except Exception as e:
-        pass
+                "sequence": str(record.seq),
+                "start": record.annotations["start"],
+                "end": record.annotations["end"]
+            }
 
-    return chains_data
+        return chains_data
+    except Exception as e:
+        raise(e)
 
 
 def extract_chains_from_fasta(fasta: str) -> list[dict] | None:
