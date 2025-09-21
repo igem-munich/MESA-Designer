@@ -125,8 +125,6 @@ def update_chain_highlight_selection(chain_id_to_toggle: str, current_pdb_select
     if state[checkbox_key] and chain_id_to_toggle not in state.highlight_selection: #If the checkbox is now checked and if the chain is not already in the selection, add it.
             # Select the entire range of residues for the chain (1-based indexing).
             state.highlight_selection[chain_id_to_toggle] = list(range(state.current_pdb_chains_data[chain_id_to_toggle]["start"], state.current_pdb_chains_data[chain_id_to_toggle]["end"] + 1))
-            print(f"start:::    {state.current_pdb_chains_data[chain_id_to_toggle]['start']}")
-            print(f"sequence:::    {state.current_pdb_chains_data[chain_id_to_toggle]['sequence']}")
     elif chain_id_to_toggle in state.highlight_selection: # If the checkbox is now unchecked and if the chain is in the selection, remove it.
         del state.highlight_selection[chain_id_to_toggle]
 
@@ -1655,5 +1653,3 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         #        file_name="mesa-design.zip",
         #        mime="application/zip"
         #    )
-
-print(state.highlight_selection)
