@@ -194,7 +194,7 @@ def generate_download() -> None:
 
             # Initialize variables for GenBank record creation.
             # Extract a clean name for the record from the FASTA-like header.
-            record_name: str = "_".join(construct[0].replace(">", "").split(" ")).strip()
+            record_name: str = "_".join(construct[0].replace(">", "").split(" ")[1:]).strip()
             record_sequence: str = ""
             record_features: list[SeqFeature] = []
 
