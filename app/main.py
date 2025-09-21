@@ -1629,8 +1629,9 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                 # Checkbox to include additional data summary and SAbDab results.
                 st.checkbox(
                     label="Include additional Data",
-                    value=True,
-                    key="download_additional"
+                    value=not state.custom_binder_toggle,
+                    key="download_additional",
+                    disabled=state.custom_binder_toggle
                 )
 
         # Generate download data if constructs are available.
