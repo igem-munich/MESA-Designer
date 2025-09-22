@@ -16,13 +16,14 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.Restriction.Restriction_Dictionary import rest_dict
 import dnachisel
 from streamlit_downloader import downloader
-from streamlit_scroll_navigation import scroll_navbar
 
 # Add the parent directory of the current file to sys.path
 # This allows for importing modules from the 'util' package.
 current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent
 sys.path.insert(0, str(project_root))
+
+from streamlit_scroll_navigation import scroll_navbar
 
 # Import custom utility functions and data from the 'util' package
 from util.antibody_search import search_antibodies
