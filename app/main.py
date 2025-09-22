@@ -310,7 +310,7 @@ def change_theme() -> None:
 
 
 # cache version of get_pdb_from_rcsb
-@st.cache_data
+@st.cache_data(show_spinner="Fetching Structure from RCSB PDB...")
 def get_cached_pdb_from_rcsb(pdb_id: str) -> str | None:
     """
     This function is simply a wrapper around the get_pdb_from_rcsb function which provides streamlit caching
@@ -321,7 +321,7 @@ def get_cached_pdb_from_rcsb(pdb_id: str) -> str | None:
 
 
 # update scroll navigation
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def update_scroll_navigation(transmembrane_design: bool, split_design: bool, protease_release_design: bool, cargo_release_design: bool, valine_design: bool) -> tuple[dict[str, str], list[str]]:
     """
     Due to infrequent updates this function caches its output, this, however, requires all relevant parameters to be passed in.
