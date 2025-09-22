@@ -4,7 +4,7 @@
    data-name="Layer 2"
    viewBox="0 170 200 280"
    version="1.1"
-   sodipodi:docname="complete_tev_no_protease_release_cargo_release.svg"
+   sodipodi:docname="complete_tev_protease_release_cargo_release.svg"
    inkscape:version="1.4.2 (ebf0e940, 2025-05-08)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -114,28 +114,36 @@
        id="path198" />
     <polygon
        class="cls-3"
-       points="180.01,386.85 180.01,346.85 150.01,346.85 120.01,346.85 120.01,386.85 120.01,426.85 150.01,426.85 180.01,426.85 "
+       points="120.01,346.85 120.01,386.85 120.01,426.85 150.01,426.85 180.01,426.85 180.01,386.85 180.01,346.85 150.01,346.85 "
        id="polygon208"
-       transform="translate(0,-34)" />
+       transform="translate(0,-72)" />
     <rect
-       style="fill:#383c3b;stroke:#383c3b;stroke-width:0.451607"
+       style="fill:#383c3b;stroke:#383c3b;stroke-width:0.551873"
        id="rect2"
-       width="9.5483932"
-       height="72.107628"
-       x="45.235806"
-       y="178.39052" />
+       width="9.4481268"
+       height="108.82364"
+       x="45.285938"
+       y="178.44066" />
     <path
        class="cls-1"
-       d="m 85.02,269.37 c -3.41,6.15 -8.4,11.31 -14.41,14.93 C 64.6,287.92 57.55,290 50.02,290 38.98,290 28.98,285.52 21.74,278.28 14.5,271.04 10.02,261.04 10.02,250 c 0,-11.04 4.48,-21.05 11.72,-28.28 7.24,-7.23 17.24,-11.72 28.28,-11.72 7.53,0 14.57,2.08 20.59,5.7 6.02,3.62 11,8.78 14.41,14.93 -4.31,1.11 -8.06,3.62 -10.73,7.02 -2.67,3.4 -4.27,7.69 -4.27,12.35 0,4.66 1.6,8.95 4.27,12.35 2.67,3.4 6.42,5.91 10.73,7.02 z"
+       d="m 85.02,331.37 c -3.41,6.15 -8.4,11.31 -14.41,14.93 C 64.6,349.92 57.55,352 50.02,352 38.98,352 28.98,347.52 21.74,340.28 14.5,333.04 10.02,323.04 10.02,312 c 0,-11.04 4.48,-21.05 11.72,-28.28 7.24,-7.23 17.24,-11.72 28.28,-11.72 7.53,0 14.57,2.08 20.59,5.7 6.02,3.62 11,8.78 14.41,14.93 -4.31,1.11 -8.06,3.62 -10.73,7.02 -2.67,3.4 -4.27,7.69 -4.27,12.35 0,4.66 1.6,8.95 4.27,12.35 2.67,3.4 6.42,5.91 10.73,7.02 z"
        id="tev"
        inkscape:label="tev"
        style="display:inline;fill:#e60082;stroke:#000000;stroke-width:10px;stroke-miterlimit:10" />
     <circle
        class="cls-1"
        cx="150.00999"
-       cy="250"
+       cy="224"
        r="20"
        id="prs"
+       inkscape:label="prs"
+       style="display:inline;fill:#e60082;stroke:#000000;stroke-width:10px;stroke-miterlimit:10" />
+    <circle
+       class="cls-1"
+       cx="50.010002"
+       cy="224"
+       r="20"
+       id="circle2"
        inkscape:label="prs"
        style="display:inline;fill:#e60082;stroke:#000000;stroke-width:10px;stroke-miterlimit:10" />
   </g>

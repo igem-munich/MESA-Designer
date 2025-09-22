@@ -195,7 +195,7 @@ def generate_download() -> None:
 
             # Initialize variables for GenBank record creation.
             # Extract a clean name for the record from the FASTA-like header.
-            record_name: str = "_".join(construct[0].replace(">", "").split(" ")).strip()
+            record_name: str = "_".join(construct[0].replace(">", "").split(" ")[1:]).strip()
             record_sequence: str = ""
             record_features: list[SeqFeature] = []
 
@@ -311,7 +311,7 @@ def change_theme() -> None:
 
 
 # cache version of get_pdb_from_rcsb
-@st.cache_data
+@st.cache_data(show_spinner="Fetching Structure from RCSB PDB...")
 def get_cached_pdb_from_rcsb(pdb_id: str) -> str | None:
     """
     This function is simply a wrapper around the get_pdb_from_rcsb function which provides streamlit caching
@@ -322,7 +322,7 @@ def get_cached_pdb_from_rcsb(pdb_id: str) -> str | None:
 
 
 # update scroll navigation
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def update_scroll_navigation(transmembrane_design: bool, split_design: bool, protease_release_design: bool, cargo_release_design: bool, valine_design: bool) -> tuple[dict[str, str], list[str]]:
     """
     Due to infrequent updates this function caches its output, this, however, requires all relevant parameters to be passed in.
@@ -1630,8 +1630,9 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                 # Checkbox to include additional data summary and SAbDab results.
                 st.checkbox(
                     label="Include additional Data",
-                    value=True,
-                    key="download_additional"
+                    value=not state.custom_binder_toggle,
+                    key="download_additional",
+                    disabled=state.custom_binder_toggle
                 )
 
         # Generate download data if constructs are available.

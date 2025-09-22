@@ -4,7 +4,7 @@
    data-name="Layer 2"
    viewBox="0 170 200 280"
    version="1.1"
-   sodipodi:docname="complete_tev_no_protease_release_cargo_release.svg"
+   sodipodi:docname="split_tev_protease_release_cargo_release.svg"
    inkscape:version="1.4.2 (ebf0e940, 2025-05-08)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -20,13 +20,13 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="1.7111999"
-     inkscape:cx="41.783546"
-     inkscape:cy="85.028054"
+     inkscape:zoom="1.7192609"
+     inkscape:cx="114.87494"
+     inkscape:cy="75.323065"
      inkscape:window-width="1680"
-     inkscape:window-height="1022"
+     inkscape:window-height="1050"
      inkscape:window-x="0"
-     inkscape:window-y="28"
+     inkscape:window-y="0"
      inkscape:window-maximized="0"
      inkscape:current-layer="g210" />
   <defs
@@ -69,13 +69,27 @@
   </defs>
   <g
      id="g210">
-    <rect
-       style="fill:#383c3b;stroke:#383c3b;stroke-width:0.634334"
-       id="rect1"
-       width="9.3656664"
-       height="145.03978"
-       x="145.32716"
-       y="207.26115" />
+    <line
+       class="cls-2"
+       x1="150.00999"
+       y1="369.72"
+       x2="150.00999"
+       y2="328"
+       id="line3" />
+    <line
+       class="cls-2"
+       x1="150.00999"
+       y1="311.72"
+       x2="150.00999"
+       y2="270"
+       id="line2" />
+    <line
+       class="cls-2"
+       x1="50.009987"
+       y1="253.72"
+       x2="50.009987"
+       y2="212"
+       id="line1" />
     <line
        class="cls-5"
        x1="0.0099999998"
@@ -108,35 +122,47 @@
        x2="150.00999"
        y2="216.85001"
        id="line194" />
+    <line
+       class="cls-2"
+       x1="150.00999"
+       y1="253.72"
+       x2="150.00999"
+       y2="212"
+       id="line196" />
     <path
        class="cls-4"
        d="m 134.44,94.64 v 0 c 0,0 0,0 0,0 4.92,2.84 10.52,3.47 15.57,2.19 5.05,-1.28 9.58,-4.46 12.33,-9.23 L 177.38,61.55 192.42,35.5 c 2.76,-4.78 3.25,-10.28 1.83,-15.3 -1.42,-5.02 -4.77,-9.55 -9.68,-12.39 v 0 c 0,0 0,0 0,0 C 179.65,4.97 174.05,4.34 169,5.62 c -5.06,1.28 -9.58,4.46 -12.33,9.23 L 141.63,40.9 126.59,66.95 c -2.76,4.78 -3.25,10.28 -1.83,15.3 1.42,5.02 4.77,9.55 9.68,12.39 z"
        id="path198" />
-    <polygon
-       class="cls-3"
-       points="180.01,386.85 180.01,346.85 150.01,346.85 120.01,346.85 120.01,386.85 120.01,426.85 150.01,426.85 180.01,426.85 "
-       id="polygon208"
-       transform="translate(0,-34)" />
-    <rect
-       style="fill:#383c3b;stroke:#383c3b;stroke-width:0.451607"
-       id="rect2"
-       width="9.5483932"
-       height="72.107628"
-       x="45.235806"
-       y="178.39052" />
     <path
        class="cls-1"
-       d="m 85.02,269.37 c -3.41,6.15 -8.4,11.31 -14.41,14.93 C 64.6,287.92 57.55,290 50.02,290 38.98,290 28.98,285.52 21.74,278.28 14.5,271.04 10.02,261.04 10.02,250 c 0,-11.04 4.48,-21.05 11.72,-28.28 7.24,-7.23 17.24,-11.72 28.28,-11.72 7.53,0 14.57,2.08 20.59,5.7 6.02,3.62 11,8.78 14.41,14.93 -4.31,1.11 -8.06,3.62 -10.73,7.02 -2.67,3.4 -4.27,7.69 -4.27,12.35 0,4.66 1.6,8.95 4.27,12.35 2.67,3.4 6.42,5.91 10.73,7.02 z"
-       id="tev"
-       inkscape:label="tev"
-       style="display:inline;fill:#e60082;stroke:#000000;stroke-width:10px;stroke-miterlimit:10" />
+       d="m 178.3,230.85 c 7.24,7.24 11.72,17.24 11.72,28.28 0,7.53 -2.08,14.57 -5.7,20.59 -3.62,6.02 -8.78,11 -14.93,14.41 -1.11,-4.31 -3.62,-8.06 -7.02,-10.73 -3.4,-2.67 -7.69,-4.27 -12.35,-4.27 -4.66,0 -8.95,1.6 -12.35,4.27 -3.4,2.67 -5.91,6.42 -7.02,10.73 -6.15,-3.41 -11.31,-8.4 -14.93,-14.41 z"
+       id="path200" />
+    <path
+       class="cls-1"
+       d="m 78.3,244.57 c -7.24,-7.24 -17.24,-11.72 -28.28,-11.72 -11.04,0 -21.04,4.48 -28.28,11.72 -7.24,7.24 -11.72,17.24 -11.72,28.28 0,7.53 2.08,14.57 5.7,20.59 z"
+       id="path202" />
     <circle
        class="cls-1"
        cx="150.00999"
-       cy="250"
+       cy="200"
        r="20"
-       id="prs"
-       inkscape:label="prs"
-       style="display:inline;fill:#e60082;stroke:#000000;stroke-width:10px;stroke-miterlimit:10" />
+       id="circle206" />
+    <polygon
+       class="cls-3"
+       points="120.01,346.85 120.01,386.85 120.01,426.85 150.01,426.85 180.01,426.85 180.01,386.85 180.01,346.85 150.01,346.85 "
+       id="polygon208"
+       transform="translate(0,12)" />
+    <circle
+       class="cls-1"
+       cx="50.009987"
+       cy="200"
+       r="20"
+       id="circle1" />
+    <circle
+       class="cls-1"
+       cx="150.00999"
+       cy="324"
+       r="20"
+       id="circle2" />
   </g>
 </svg>
