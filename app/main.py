@@ -11,6 +11,7 @@ import io
 import json
 from datetime import datetime
 from Bio import SeqIO
+from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.Restriction.Restriction_Dictionary import rest_dict
@@ -66,6 +67,8 @@ if "tag_chain_association" not in state: # Dictionary to track which detection t
     state.tag_chain_association = {}
 if "construct_list_formatted" not in state: # Dictionary storing formatted construct data (for annotated_text display and GenBank file generation)
     state.construct_list_formatted = {}
+if "construct_list_unformatted" not in state: # Dictionary storing unformatted construct sequences (simply the sequence)
+    state.construct_list_unformatted = {}
 if "download_data" not in state: # Stores a BytesIO object containing the final ZIP file for download
     state.download_data = None
 if "prev_search" not in state: # Stores the previous search query to detect changes in the search field
@@ -102,12 +105,15 @@ if "themes" not in state: # Dictionary to manage light/dark mode themes and thei
             st._config.set_option(key, value)
 if "current_pdb" not in state: # Stores the content of the currently selected PDB file as a string
     state.current_pdb = ""
-if "chain_sequences" not in state: # Dictionary to store the final assembled sequences for Chain A and Chain B
+if "chain_sequences" not in state: # Dictionary to store the final assembled sequences for Chain A and Chain B (binder only, not complete mesa chain)
     state.chain_sequences = {"Chain A": "", "Chain B": ""}
 
 # Define preset restriction sites, including common BioBrick and iGEM standards.
 # These are used for sequence optimization to avoid certain restriction enzyme recognition sites.
-rest_sites: dict[str, list[str]] = {"iGEM BioBrick Full + SacI, NcoI, KpnI, HindIII": ["AgeI", "AvrII", "BamHI", "BglII", "BsaI", "EcoRI", "HindIII", "KpnI", "NcoI", "NgoMIV", "NheI", "NotI", "PstI", "PvuII", "SacI", "SapI", "SpeI", "XbaI", "XhoI"], "iGEM BioBrick Full": ["AgeI","AvrII","BamHI","BglII","BsaI","EcoRI","NgoMIV","NheI","NotI","PstI","PvuII","SapI","SpeI","XbaI","XhoI"], "RFC10": ["EcoRI","NotI","PstI","SpeI","XbaI"], "RFC1000": ["BsaI", "SapI"], "RFC12": ["AvrII","EcoRI","NheI","NotI","PstI","PvuII","SapI","SpeI","XbaI","XhoI"]}
+REST_SITES: dict[str, list[str]] = {"iGEM BioBrick Full + SacI, NcoI, KpnI, HindIII": ["AgeI", "AvrII", "BamHI", "BglII", "BsaI", "EcoRI", "HindIII", "KpnI", "NcoI", "NgoMIV", "NheI", "NotI", "PstI", "PvuII", "SacI", "SapI", "SpeI", "XbaI", "XhoI"], "iGEM BioBrick Full": ["AgeI","AvrII","BamHI","BglII","BsaI","EcoRI","NgoMIV","NheI","NotI","PstI","PvuII","SapI","SpeI","XbaI","XhoI"], "RFC10": ["EcoRI","NotI","PstI","SpeI","XbaI"], "RFC1000": ["BsaI", "SapI"], "RFC12": ["AvrII","EcoRI","NheI","NotI","PstI","PvuII","SapI","SpeI","XbaI","XhoI"]}
+
+# define preset legal amino acids, if others are contained in chain sequences, the sequence optimization will fail and thus not be available
+LEGAL_AMINO_ACIDS: set[str] = {"A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y", "*"}
 
 def update_chain_highlight_selection(chain_id_to_toggle: str, current_pdb_selection: str) -> None:
     """
@@ -206,43 +212,57 @@ def generate_download() -> None:
                 # Handle annotated parts (tuples: (sequence, name, color)).
                 if isinstance(part, tuple):
                     if len(part[0]) > 0: # Ensure the sequence part is not empty.
-                        # Add a sequence feature for annotated parts, calculating start/end in base pairs (x3 for DNA).
-                        record_features.append(SeqFeature(location=FeatureLocation(start=len(record_sequence)*3,
-                                                                                   end=(len(record_sequence) + len(part[0]))*3),
+                        # Define a feature qualifier dictionary with the name and translation (if using sequence optimization).
+                        qualifiers: dict[str, str] = {"name": part[1], "translation": part[0]} if state.sequence_optimization_toggle else {"name": part[1]}
+                        # Add a sequence feature for annotated parts, calculating start/end in base pairs (x3 for DNA when using sequence optimization).
+                        record_features.append(SeqFeature(location=FeatureLocation(start=(len(record_sequence) * (3 if state.sequence_optimization_toggle else 1)),
+                                                                                   end=(len(record_sequence) + len(part[0])) * (3 if state.sequence_optimization_toggle else 1)),
                                                           type="CDS", # Coding Sequence type
-                                                          qualifiers={"name": part[1], "translation": part[0]})) # Store name and amino acid translation.
+                                                          qualifiers=qualifiers)) # Store name and amino acid translation.
                         record_sequence += part[0] # Append amino acid sequence.
 
                 else: # Handle non-annotated string parts (e.g., linkers not specifically annotated).
                     if len(part) > 0: # Ensure the string part is not empty.
                         record_sequence += part # Append amino acid sequence.
 
-            # Perform sequence optimization using dnachisel.
-            # Reverse translate the amino acid sequence to DNA.
-            sequence = dnachisel.reverse_translate(record_sequence)
-            # Define constraints: avoid specified restriction sites and enforce translation.
-            cons = [dnachisel.AvoidPattern(pat+"_site") for pat in state.optimization_settings["restriction_enzymes"]]
-            cons.append(dnachisel.EnforceTranslation())
-            # Create a DNA optimization problem.
-            problem = dnachisel.DnaOptimizationProblem(sequence = sequence, constraints = cons, objectives = [dnachisel.CodonOptimize(species=state.optimization_settings["species"], method="match_codon_usage")])
-            # Resolve constraints and optimize the DNA sequence.
-            problem.resolve_constraints(final_check = True)
-            problem.optimize()
-            # Get the optimized sequence as a SeqRecord.
-            recordseq: SeqRecord = problem.to_record()
+            # Define a clean file name for the GenBank file.
+            file_name: str = f"{key.replace(' ', '_').replace(':', '').replace('-', '_').replace('/', '_')}.gb"
 
-            # Create the final SeqRecord for GenBank output.
-            record: SeqRecord = SeqRecord(recordseq.seq, # Use the optimized DNA sequence.
-                               id=record_name,
-                               name=record_name,
-                               description=record_name,
-                               features=record_features,
-                               annotations={"molecule_type": "DNA"}) # Specify molecule type as DNA.
+            if state.sequence_optimization_toggle:
+                # Perform sequence optimization using dnachisel.
+                # Reverse translate the amino acid sequence to DNA.
+                sequence = dnachisel.reverse_translate(record_sequence)
+                # Define constraints: avoid specified restriction sites and enforce translation.
+                cons = [dnachisel.AvoidPattern(pat+"_site") for pat in state.optimization_settings["restriction_enzymes"]]
+                cons.append(dnachisel.EnforceTranslation())
+                # Create a DNA optimization problem.
+                problem = dnachisel.DnaOptimizationProblem(sequence = sequence, constraints = cons, objectives = [dnachisel.CodonOptimize(species=state.optimization_settings["species"], method="match_codon_usage")])
+                # Resolve constraints and optimize the DNA sequence.
+                problem.resolve_constraints(final_check = True)
+                problem.optimize()
+                # Get the optimized sequence as a SeqRecord.
+                recordseq: SeqRecord = problem.to_record()
+
+                # Create the final SeqRecord for GenBank output.
+                record: SeqRecord = SeqRecord(recordseq.seq, # Use the optimized DNA sequence.
+                                   id=record_name,
+                                   name=record_name,
+                                   description=record_name,
+                                   features=record_features,
+                                   annotations={"molecule_type": "DNA"}) # Specify molecule type as DNA.
+
+            else:
+                # Create the final SeqRecord for GenBank output.
+                record: SeqRecord = SeqRecord(Seq(record_sequence), # Use the unoptimized amino acid sequence.
+                                              id=record_name,
+                                              name=record_name,
+                                              description=record_name,
+                                              features=record_features,
+                                              annotations={"molecule_type": "PROTEIN"}) # Specify molecule type as protein.
+
             # Write the GenBank record to a temporary string buffer.
             tmp_file: io.StringIO = io.StringIO()
             SeqIO.write(record, tmp_file, "genbank")
-            # Define a clean file name for the GenBank file.
-            file_name: str = f"{key.replace(' ', '_').replace(':', '').replace('-', '_').replace('/', '_')}.gb"
             # Add the GenBank file to the ZIP archive.
             zf.writestr(file_name, tmp_file.getvalue())
 
@@ -282,6 +302,50 @@ def generate_download() -> None:
 
     # Store the complete ZIP file content in the session state for download.
     state.download_data = zip_buffer.getvalue()
+
+
+# cache for better performance as users typically switch back and forth, thus allowing for previous determinations to be re-used
+@st.cache_data(show_spinner=False)
+def enable_sequence_optimization(sequences: list[str]) -> bool:
+    """
+    This function takes a list of sequences and determines whether sequence optimization is possible.
+    :param sequences: A list of sequences.
+    :return: True if sequence optimization is possible, False otherwise.
+    """
+    # check if any of the sequences contain illegal characters
+    for seq in sequences:
+        seq_letters: set[str] = set(letter for letter in seq)
+        for aa in seq_letters:
+            if aa not in LEGAL_AMINO_ACIDS:
+                print(f"Sequence optimization is not possible due to illegal character in sequence: {seq}; aa: {aa}")
+                return False
+
+    # return true otherwise
+    return True
+
+
+# cache due to frequent repeats of same sequence
+@st.cache_data(show_spinner=False)
+def get_unannotated_construct_list(annotated_construct_list: dict[str, list[str | tuple[str, str] | tuple[str, str, str]]]) -> dict[str, str]:
+    construct_list_unformatted = {}
+    for key, construct in annotated_construct_list.items():
+        construct_sequence = ""
+        for part in construct[1:]:
+            if part == "":  # Skip empty parts.
+                continue
+
+            # Handle annotated parts (tuples: (sequence, name, color)).
+            if isinstance(part, tuple):
+                if len(part[0]) > 0:  # Ensure the sequence part is not empty.
+                    construct_sequence += part[0]  # Append amino acid sequence.
+
+            else:  # Handle non-annotated string parts (e.g., linkers not specifically annotated).
+                if len(part) > 0:  # Ensure the string part is not empty.
+                    construct_sequence += part  # Append amino acid sequence.
+
+        construct_list_unformatted[key] = construct_sequence
+
+    return construct_list_unformatted
 
 
 # Streamlit app configuration and theme management.
@@ -1560,6 +1624,9 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         # Store the assembled formatted construct list in session state.
         state.construct_list_formatted = construct_list
 
+        # Update state with new constructs
+        state.construct_list_unformatted = get_unannotated_construct_list(construct_list)
+
         # Display constructs for user review and selection for download.
         st.subheader("Construct Overview")
 
@@ -1580,37 +1647,48 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                         key=f"{key}_checkbox",
                         label_visibility="collapsed"
                     )
-        st.subheader("Sequence Optimization")
-        with st.container(border=True):
-            optimization_cols = st.columns(2)
-            with optimization_cols[0]:
-                # Select box for predefined restriction site avoidance options.
-                option = st.selectbox("Avoid Restriction Sites", ("RFC10", "RFC12", "RFC1000", "iGEM BioBrick Full", "iGEM BioBrick Full + SacI, NcoI, KpnI, HindIII", "Custom"))
 
-                state.optimization_settings["sel"] = option # Store selected option.
-            with optimization_cols[1]:
-                # Select box for species to optimize codon usage for.
-                species = st.selectbox("Select Species to optimize", ("H. Sapiens", "M. Musculus", "D. Melanogaster", "G. Gallus")).replace(". ", "_").lower()
-                state.optimization_settings["species"] = species # Store selected species.
+        # Sequence Optimization (example: compliance with iGEM regulations)
+        st.toggle(
+            label="Sequence Optimization",
+            value=enable_sequence_optimization(list(state.construct_list_unformatted.values())),
+            key="sequence_optimization_toggle",
+            help="Options to create optimized nucleotide sequences from MESA Chains. Example: Target Organism: Human; Restriction Sites to avoid: BioBrick RFC[10] (iGEM)",
+            disabled=not enable_sequence_optimization(list(state.construct_list_unformatted.values()))
+        )
 
-            if state.optimization_settings["sel"] == "Custom":
-                # Multiselect for adding custom restriction enzymes if "Custom" option is chosen.
-                opt = st.multiselect("Add Restriction Enzyme", rest_dict.keys(), key="restriction_add")
-                if opt:
-                    state.optimization_settings["custom_enzymes"] = opt # Store custom enzymes.
-                    cols = st.columns(3)
-                    with cols[0]:
-                        st.markdown("#### Restriction Enzyme")
-                        for enzyme in state.optimization_settings["custom_enzymes"]:
-                            st.write(enzyme) # Display selected enzyme names.
-                    with cols[1]:
-                        st.markdown("#### Restriction Site")
-                        for enzyme in state.optimization_settings["custom_enzymes"]:
-                            st.write(rest_dict[enzyme]["site"]) # Display their recognition sites.
-                    state.optimization_settings["restriction_enzymes"] = state.optimization_settings["custom_enzymes"]
-            else:
-                # If a predefined option is chosen, use its corresponding restriction sites.
-                state.optimization_settings["restriction_enzymes"] = rest_sites[state.optimization_settings["sel"]]
+        if state.sequence_optimization_toggle:
+            st.subheader("Sequence Optimization")
+            with st.container(border=True):
+                optimization_cols = st.columns(2)
+                with optimization_cols[0]:
+                    # Select box for predefined restriction site avoidance options.
+                    option = st.selectbox("Avoid Restriction Sites", ("RFC10", "RFC12", "RFC1000", "iGEM BioBrick Full", "iGEM BioBrick Full + SacI, NcoI, KpnI, HindIII", "Custom"))
+
+                    state.optimization_settings["sel"] = option # Store selected option.
+                with optimization_cols[1]:
+                    # Select box for species to optimize codon usage for.
+                    species = st.selectbox("Select Species to optimize", ("H. Sapiens", "M. Musculus", "D. Melanogaster", "G. Gallus")).replace(". ", "_").lower()
+                    state.optimization_settings["species"] = species # Store selected species.
+
+                if state.optimization_settings["sel"] == "Custom":
+                    # Multiselect for adding custom restriction enzymes if "Custom" option is chosen.
+                    opt = st.multiselect("Add Restriction Enzyme", rest_dict.keys(), key="restriction_add")
+                    if opt:
+                        state.optimization_settings["custom_enzymes"] = opt # Store custom enzymes.
+                        cols = st.columns(3)
+                        with cols[0]:
+                            st.markdown("#### Restriction Enzyme")
+                            for enzyme in state.optimization_settings["custom_enzymes"]:
+                                st.write(enzyme) # Display selected enzyme names.
+                        with cols[1]:
+                            st.markdown("#### Restriction Site")
+                            for enzyme in state.optimization_settings["custom_enzymes"]:
+                                st.write(rest_dict[enzyme]["site"]) # Display their recognition sites.
+                        state.optimization_settings["restriction_enzymes"] = state.optimization_settings["custom_enzymes"]
+                else:
+                    # If a predefined option is chosen, use its corresponding restriction sites.
+                    state.optimization_settings["restriction_enzymes"] = REST_SITES[state.optimization_settings["sel"]]
 
         # Include additional files in the download.
         st.subheader("Additional Files")
