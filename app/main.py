@@ -306,17 +306,18 @@ def generate_download() -> None:
 
 # cache for better performance as users typically switch back and forth, thus allowing for previous determinations to be re-used
 @st.cache_data(show_spinner=False)
-def enable_sequence_optimization(sequences: list[str]) -> bool:
+def enable_sequence_optimization(sequences: list[str], legal_amino_acids: set[str]) -> bool:
     """
     This function takes a list of sequences and determines whether sequence optimization is possible.
     :param sequences: A list of sequences.
+    :param legal_amino_acids: A set of legal amino acid characters.
     :return: True if sequence optimization is possible, False otherwise.
     """
     # check if any of the sequences contain illegal characters
     for seq in sequences:
         seq_letters: set[str] = set(letter for letter in seq)
         for aa in seq_letters:
-            if aa not in LEGAL_AMINO_ACIDS:
+            if aa not in legal_amino_acids:
                 print(f"Sequence optimization is not possible due to illegal character in sequence: {seq}; aa: {aa}")
                 return False
 
@@ -1651,10 +1652,10 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         # Sequence Optimization (example: compliance with iGEM regulations)
         st.toggle(
             label="Sequence Optimization",
-            value=enable_sequence_optimization(list(state.construct_list_unformatted.values())),
+            value=enable_sequence_optimization(list(state.construct_list_unformatted.values()), LEGAL_AMINO_ACIDS),
             key="sequence_optimization_toggle",
             help="Options to create optimized nucleotide sequences from MESA Chains. Example: Target Organism: Human; Restriction Sites to avoid: BioBrick RFC[10] (iGEM)",
-            disabled=not enable_sequence_optimization(list(state.construct_list_unformatted.values()))
+            disabled=not enable_sequence_optimization(list(state.construct_list_unformatted.values()), LEGAL_AMINO_ACIDS),
         )
 
         if state.sequence_optimization_toggle:
