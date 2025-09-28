@@ -868,6 +868,8 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         if not custom_tmd:
             st.info("You can base your choice of TMDs on this [Paper](https://pubmed.ncbi.nlm.nih.gov/33392392/) and its [supplementary data](https://pmc.ncbi.nlm.nih.gov/articles/PMC7759213/#sup1).")
 
+        st.info("Use [TMDock](https://membranome.org/tmdock) to predict TMD agglomeration and relative positioning.")
+
         # Create columns for TMD selection/input for each active chain.
         tmd_sequence_cols = st.columns(len([chain_id for chain_id in state.chain_sequences if len(state.chain_sequences[chain_id]) > 0]))
 
@@ -1060,8 +1062,7 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                                         state.protease_chain_association["c"].remove(chain_id)
                 else: # Custom split protease input.
                     st.markdown("#### Custom Protease")
-                    st.info(
-                        "You can use [SPELL](https://dokhlab.med.psu.edu/spell/login.php) to guide your splitting process!")
+                    st.info("You can use [SPELL](https://dokhlab.med.psu.edu/spell/login.php) to guide your splitting process!")
 
                     # Columns for custom N-terminus and C-terminus input.
                     split_n_col, split_c_col = st.columns(2)
