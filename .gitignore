@@ -12,3 +12,4 @@
 ReceptorsDB.db
 /experiment/
 /streamlit_scroll_navigation/
+.limited_run.py

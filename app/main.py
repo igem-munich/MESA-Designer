@@ -30,6 +30,8 @@ from util.antibody_search import search_antibodies
 from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs, CHAIN_COLORS, SIGNAL_SEQS, TAG_SEQS
 from util.pdb_interaction import extract_chains_from_pdb, get_pdb_from_rcsb
 
+# Set Streamlit page configuration (must be called before any other Streamlit command)
+st.set_page_config(page_title="MESA-Designer", layout="wide", page_icon="🧬")
 
 # Initialize Streamlit's session state.
 # Session state is used to persist data across reruns of the Streamlit app.
@@ -458,8 +460,6 @@ if state.themes["refreshed"] == False:
     state.themes["refreshed"] = True
     st.rerun()
 
-# Set Streamlit page configuration (title, layout, icon).
-st.set_page_config(page_title="MESA-Designer", layout="wide", page_icon="🧬")
 # Get the current browser window width using JavaScript to adjust PDB display size.
 page_width = streamlit_js_eval(js_expressions="window.innerWidth", key="WIDTH", want_output=True)
 
