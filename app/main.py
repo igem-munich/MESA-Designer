@@ -2237,7 +2237,7 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         if st.button("Start Download"):
             generate_download()
             download_complete: bool = downloader(
-                data=state.download_data,+
+                data=state.download_data,
                 filename="mesa-design.zip",
                 content_type="application/zip",
             )
