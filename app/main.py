@@ -691,6 +691,50 @@ def generate_download() -> None:
             state.sabdab.to_csv(s)
             zf.writestr("sabdab_data.csv", s.getvalue())
 
+        # Add mandatory references file
+        references_content: str = """MESA Designer - References and Citations
+==========================================
+
+Built by: iGEM Munich 2025 Team
+
+Key Scientific References:
+
+1. MESA Receptor Framework (Original):
+   Daringer, N.M., Dudek, R.M., Schwarz, K.A., Leonard, J.N. (2014)
+   "Modular Extracellular Sensor Architecture for Engineering Mammalian Cell-based Devices"
+   ACS Synthetic Biology
+   DOI: https://pubs.acs.org/doi/10.1021/sb400128g
+
+2. MESA Applied to Human Cells:
+   Schwarz, K.A., Daringer, N.M., Dolberg, T.B., Leonard, J.N. (2017)
+   "Rewiring human cellular input-output using modular extracellular sensors"
+   Nature Chemical Biology
+   PubMed: https://pubmed.ncbi.nlm.nih.gov/27941759/
+
+3. Elucidation and Refinement of Synthetic Receptor Mechanisms:
+   Edelstein, H.I., Donahue, P.S., Muldoon, J.J., Kang, A.K., Dolberg, T.B., Battaglia, L.M., Allchin, E.R., Hong, M., Leonard, J.N. (2020)
+   "Elucidation and refinement of synthetic receptor mechanisms"
+   Synthetic Biology, 5(1), ysaa017
+   DOI: https://doi.org/10.1093/synbio/ysaa017
+   PubMed: https://pubmed.ncbi.nlm.nih.gov/33392392/
+
+4. SAbDab - Structural Antibody Database:
+   Dunbar, J., Krawczyk, K. et al. (2014)
+   "SAbDab: the structural antibody database"
+   Nucleic Acids Research, 42, D1140-D1146
+   DOI: https://academic.oup.com/nar/article/42/D1/D1140/1044118
+
+5. SKEMPI 2.0 - Protein Interaction Database:
+   Jankauskaitė, J., Jiménez-García, B., Dapkūnas, J., Fernández-Recio, J., Moal, I.H. (2019)
+   "SKEMPI 2.0: an updated benchmark of changes in protein–protein binding energy, kinetics and thermodynamics upon mutation"
+   Bioinformatics, 35(3):462-469
+   DOI: https://academic.oup.com/bioinformatics/article/35/3/462/5055583
+
+Acknowledgments:
+We thank all contributors and the scientific community for making this work possible.
+"""
+        zf.writestr("REFERENCES.txt", references_content)
+
     # Reset the buffer's position to the beginning after writing all data.
     zip_buffer.seek(0)
 
@@ -2193,7 +2237,7 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         if st.button("Start Download"):
             generate_download()
             download_complete: bool = downloader(
-                data=state.download_data,
+                data=state.download_data,+
                 filename="mesa-design.zip",
                 content_type="application/zip",
             )
@@ -2207,3 +2251,22 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         #        file_name="mesa-design.zip",
         #        mime="application/zip"
         #    )
+
+# Footer with references
+st.divider()
+st.markdown("""
+<div style="text-align: center; padding: 20px; font-size: 0.9em; color: #666;">
+    <p><strong>MESA Designer</strong> - Built by iGEM Munich 2025</p>
+    <p style="margin-top: 10px;">
+        <strong>Key References:</strong><br>
+        <a href="https://pubs.acs.org/doi/10.1021/sb400128g" target="_blank">Daringer et al. (2014) - ACS Synthetic Biology</a> |
+        <a href="https://pubmed.ncbi.nlm.nih.gov/27941759/" target="_blank">Schwarz et al. (2017) - Nature Chemical Biology</a> |
+        <a href="https://pubmed.ncbi.nlm.nih.gov/33392392/" target="_blank">Edelstein et al. (2020) - Synthetic Biology</a><br>
+        <a href="https://academic.oup.com/nar/article/42/D1/D1140/1044118" target="_blank">SAbDab - Dunbar et al. (2014)</a> |
+        <a href="https://academic.oup.com/bioinformatics/article/35/3/462/5055583" target="_blank">SKEMPI 2.0 - Jankauskaitė et al. (2019)</a>
+    </p>
+    <p style="margin-top: 15px; font-size: 0.85em;">
+        We thank all contributors and the scientific community for making this work possible.
+    </p>
+</div>
+""", unsafe_allow_html=True)
