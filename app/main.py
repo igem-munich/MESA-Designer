@@ -32,8 +32,11 @@ from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, 
 from util.pdb_interaction import extract_chains_from_pdb, get_pdb_from_rcsb
 
 # Set Streamlit page configuration (must be called before any other Streamlit command)
-st.set_page_config(page_title="MESA-Designer", layout="wide", page_icon="🧬")
-
+st.set_page_config(page_title="MESA-Designer", layout="wide", page_icon="resources/imgs/MESA.png", menu_items={
+        'Get Help': 'mailto:software@igem-munich.com',
+        'Report a bug': "https://github.com/igem-munich/MESA-Designer/issues/new/choose",
+        'About': "The iGEM Munich 2025 MESA Designer Software Tool is an easy-to-use [MESA (Modular Extracellular Sensor Architecture for Engineering Mammalian Cell-based Devices)](https://pmc.ncbi.nlm.nih.gov/articles/PMC4161666/) design tool. The MESA Receptor Framework is a highly flexible and adaptable method for custom cellular circuit creation. The MESA Designer Tool provides a ... package for creation. Docker, Python package, webapp."
+    })
 # Initialize Streamlit's session state.
 # Session state is used to persist data across reruns of the Streamlit app.
 state = st.session_state
@@ -696,7 +699,7 @@ def generate_download() -> None:
         references_content: str = """MESA Designer - References and Citations
 ==========================================
 
-Built by: iGEM Munich 2025 Team
+Built with ❤️ by iGEM Munich 2025 
 
 Key Scientific References:
 
@@ -2257,7 +2260,7 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
 st.divider()
 st.markdown("""
 <div style="text-align: center; padding: 20px; font-size: 0.9em; color: #666;">
-    <p><strong>MESA Designer</strong> - Built by iGEM Munich 2025</p>
+    <p><strong>MESA Designer</strong> - Built with ❤️ by iGEM Munich 2025</p>
     <p style="margin-top: 10px;">
         <strong>Key References:</strong><br>
         <a href="https://pubs.acs.org/doi/10.1021/sb400128g" target="_blank">Daringer et al. (2014) - ACS Synthetic Biology</a> |

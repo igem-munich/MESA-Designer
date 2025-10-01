@@ -2,7 +2,11 @@ from fastapi import FastAPI, HTTPException, Path, Query
 from pathlib import Path as pathlibPath
 import sys
 from pydantic import BaseModel, Field
-
+from fastapi.openapi.docs import (
+    get_redoc_html,
+    get_swagger_ui_html,
+)
+from fastapi.staticfiles import StaticFiles
 # Add the main directory of the project to the system path.
 # This allows for importing utility modules from the 'util' package.
 current_dir = pathlibPath(__file__).resolve().parent
@@ -180,10 +184,29 @@ def get_pdb_with_http_error(pdb_id: str) -> str:
 # Initialize the FastAPI application.
 app: FastAPI = FastAPI(
     title="MESA-Designer API",
-    description="API for MESA-Designer to programmatically interact with its functionalities.",
+    description="API for MESA-Designer to programmatically intercat with its functionalities.",
+    docs_url=None,
+    redoc_url=None,
     version="0.1.0",
 )
+app.mount("/resources", StaticFiles(directory="resources"), name="resources")
 
+
+@app.get(path="/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title="MESA Designer API",
+        swagger_favicon_url="/resources/imgs/MESA.png"
+    )
+
+@app.get(path="/redoc", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_redoc_html(
+        openapi_url=app.openapi_url,
+        title="MESA Designer API",
+        redoc_favicon_url="/resources/imgs/MESA.png"
+    )
 
 @app.get(path="/", summary="Root endpoint for MESA-Designer API")
 async def read_root() -> dict[str, str]:
