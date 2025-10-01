@@ -11,6 +11,7 @@ import io
 import json
 from datetime import datetime
 from Bio import SeqIO
+from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.Restriction.Restriction_Dictionary import rest_dict
@@ -30,6 +31,8 @@ from util.antibody_search import search_antibodies
 from util import TMD_DATA, CTEV_DATA, NTEV_DATA, TEVP_DATA, PRS_DATA, AIP_DATA, FRET_ICDs, CHAIN_COLORS, SIGNAL_SEQS, TAG_SEQS
 from util.pdb_interaction import extract_chains_from_pdb, get_pdb_from_rcsb
 
+# Set Streamlit page configuration (must be called before any other Streamlit command)
+st.set_page_config(page_title="MESA-Designer", layout="wide", page_icon="🧬")
 
 # Initialize Streamlit's session state.
 # Session state is used to persist data across reruns of the Streamlit app.
@@ -67,6 +70,8 @@ if "tag_chain_association" not in state: # Dictionary to track which detection t
     state.tag_chain_association = {}
 if "construct_list_formatted" not in state: # Dictionary storing formatted construct data (for annotated_text display and GenBank file generation)
     state.construct_list_formatted = {}
+if "construct_list_unformatted" not in state: # Dictionary storing unformatted construct sequences (simply the sequence)
+    state.construct_list_unformatted = {}
 if "download_data" not in state: # Stores a BytesIO object containing the final ZIP file for download
     state.download_data = None
 if "prev_search" not in state: # Stores the previous search query to detect changes in the search field
@@ -103,12 +108,407 @@ if "themes" not in state: # Dictionary to manage light/dark mode themes and thei
             st._config.set_option(key, value)
 if "current_pdb" not in state: # Stores the content of the currently selected PDB file as a string
     state.current_pdb = ""
-if "chain_sequences" not in state: # Dictionary to store the final assembled sequences for Chain A and Chain B
+if "chain_sequences" not in state: # Dictionary to store the final assembled sequences for Chain A and Chain B (binder only, not complete mesa chain)
     state.chain_sequences = {"Chain A": "", "Chain B": ""}
+if "validation_warnings" not in state: # Dictionary to store validation warnings by component for summary display
+    state.validation_warnings = {}
 
 # Define preset restriction sites, including common BioBrick and iGEM standards.
 # These are used for sequence optimization to avoid certain restriction enzyme recognition sites.
-rest_sites: dict[str, list[str]] = {"iGEM BioBrick Full + SacI, NcoI, KpnI, HindIII": ["AgeI", "AvrII", "BamHI", "BglII", "BsaI", "EcoRI", "HindIII", "KpnI", "NcoI", "NgoMIV", "NheI", "NotI", "PstI", "PvuII", "SacI", "SapI", "SpeI", "XbaI", "XhoI"], "iGEM BioBrick Full": ["AgeI","AvrII","BamHI","BglII","BsaI","EcoRI","NgoMIV","NheI","NotI","PstI","PvuII","SapI","SpeI","XbaI","XhoI"], "RFC10": ["EcoRI","NotI","PstI","SpeI","XbaI"], "RFC1000": ["BsaI", "SapI"], "RFC12": ["AvrII","EcoRI","NheI","NotI","PstI","PvuII","SapI","SpeI","XbaI","XhoI"]}
+REST_SITES: dict[str, list[str]] = {"iGEM BioBrick Full + SacI, NcoI, KpnI, HindIII": ["AgeI", "AvrII", "BamHI", "BglII", "BsaI", "EcoRI", "HindIII", "KpnI", "NcoI", "NgoMIV", "NheI", "NotI", "PstI", "PvuII", "SacI", "SapI", "SpeI", "XbaI", "XhoI"], "iGEM BioBrick Full": ["AgeI","AvrII","BamHI","BglII","BsaI","EcoRI","NgoMIV","NheI","NotI","PstI","PvuII","SapI","SpeI","XbaI","XhoI"], "RFC10": ["EcoRI","NotI","PstI","SpeI","XbaI"], "RFC1000": ["BsaI", "SapI"], "RFC12": ["AvrII","EcoRI","NheI","NotI","PstI","PvuII","SapI","SpeI","XbaI","XhoI"]}
+
+# define preset legal amino acids, if others are contained in chain sequences, the sequence optimization will fail and thus not be available
+LEGAL_AMINO_ACIDS: set[str] = {"A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y", "*"}
+
+
+# Input Validation Functions
+def validate_search_query(query: str) -> tuple[bool, str]:
+    """
+    Validate antigen search query.
+
+    :param query: The search query string to validate.
+    :return: Tuple of (is_valid, error_message). error_message is empty string if valid.
+    """
+    query = query.strip()
+
+    if not query:
+        return False, "Search query cannot be empty"
+
+    if len(query) > 100:
+        return False, "Search query too long (max 100 characters)"
+
+    # Allow alphanumeric, spaces, hyphens, and common scientific notation
+    import re
+    if not re.match(r'^[a-zA-Z0-9\s\-\_\.]+$', query):
+        return False, "Search query contains invalid characters. Use only letters, numbers, spaces, hyphens, underscores, and periods"
+
+    return True, ""
+
+
+def validate_protein_sequence(seq: str, chain_name: str) -> tuple[str, list[str]]:
+    """
+    Validate protein sequence input for binder chains.
+
+    :param seq: The protein sequence to validate.
+    :param chain_name: Name of the chain for error messages.
+    :return: Tuple of (cleaned_sequence, warnings_list). Returns cleaned sequence and list of warning messages.
+    """
+    # Remove whitespace and convert to uppercase
+    cleaned: str = seq.strip().upper().replace(" ", "").replace("\n", "").replace("\r", "")
+    warnings: list[str] = []
+
+    if not cleaned:
+        return "", []  # Allow empty (user might only use one chain)
+
+    # Check for maximum length
+    if len(cleaned) > 5000:
+        warnings.append(f"{chain_name}: Sequence exceeds maximum length (5000 amino acids)")
+        cleaned = cleaned[:5000]
+
+    # Standard amino acids + stop codon
+    VALID_AA: set[str] = set("ACDEFGHIKLMNPQRSTVWY*")
+
+    invalid_chars: set[str] = set(cleaned) - VALID_AA
+
+    if invalid_chars:
+        warnings.append(f"{chain_name}: Contains non-standard amino acid codes: {', '.join(sorted(invalid_chars))}. This may affect sequence optimization")
+
+    # Check for internal stop codons
+    if "*" in cleaned:
+        stop_positions: list[int] = [i for i, aa in enumerate(cleaned) if aa == "*"]
+        warnings.append(f"{chain_name}: Contains internal stop codon(s) at position(s) {', '.join(map(str, [p+1 for p in stop_positions]))}. This will terminate translation prematurely")
+
+    return cleaned, warnings
+
+
+def validate_linker_pattern(pattern: str) -> tuple[str, list[str]]:
+    """
+    Validate linker pattern (should be short amino acid sequence).
+
+    :param pattern: The linker pattern to validate.
+    :return: Tuple of (cleaned_pattern, warnings_list).
+    """
+    cleaned: str = pattern.strip().upper().replace(" ", "")
+    warnings: list[str] = []
+
+    if not cleaned:
+        warnings.append("Linker pattern cannot be empty")
+        return "", warnings
+
+    if len(cleaned) > 100:
+        warnings.append("Linker pattern too long (max 100 amino acids). Use 'Repeats' to create longer linkers")
+        cleaned = cleaned[:100]
+
+    # Check for non-standard amino acids
+    VALID_AA: set[str] = set("ACDEFGHIKLMNPQRSTVWY*")
+    invalid_chars: set[str] = set(cleaned) - VALID_AA
+
+    if invalid_chars:
+        warnings.append(f"Contains non-standard characters: {', '.join(sorted(invalid_chars))}")
+
+    # Check for stop codons in linkers
+    if "*" in cleaned:
+        warnings.append("Linker pattern contains stop codon (*). This may cause translation termination")
+
+    return cleaned, warnings
+
+
+def validate_linker_sequence(seq: str, chain_name: str) -> tuple[str, list[str]]:
+    """
+    Validate full linker sequence (generated or manually entered).
+
+    :param seq: The linker sequence to validate.
+    :param chain_name: Name of the chain for warning messages.
+    :return: Tuple of (cleaned_sequence, warnings_list).
+    """
+    cleaned: str = seq.strip().upper().replace(" ", "")
+    warnings: list[str] = []
+
+    if not cleaned:
+        warnings.append(f"{chain_name} linker: Sequence cannot be empty")
+        return "", warnings
+
+    if len(cleaned) > 1000:
+        warnings.append(f"{chain_name} linker: Exceeds maximum length (1000 amino acids)")
+        cleaned = cleaned[:1000]
+
+    # Check for non-standard amino acids
+    VALID_AA: set[str] = set("ACDEFGHIKLMNPQRSTVWY*")
+    invalid_chars: set[str] = set(cleaned) - VALID_AA
+
+    if invalid_chars:
+        warnings.append(f"{chain_name} linker: Contains non-standard amino acids: {', '.join(sorted(invalid_chars))}")
+
+    # Check for stop codons
+    if "*" in cleaned:
+        warnings.append(f"{chain_name} linker: Contains stop codon(s). This may terminate translation")
+
+    # Warn about unusual linker characteristics
+    if len(cleaned) < 5:
+        warnings.append(f"{chain_name} linker: Very short (<5 AA) - may not provide sufficient flexibility")
+
+    if len(cleaned) > 200:
+        warnings.append(f"{chain_name} linker: Very long (>200 AA) - verify this is intentional")
+
+    # Check for hydrophobic-heavy linkers (potential aggregation)
+    if len(cleaned) > 0:
+        hydrophobic: int = sum(1 for aa in cleaned if aa in "AILMFVPW")
+        hydrophobic_ratio: float = hydrophobic / len(cleaned)
+        if hydrophobic_ratio > 0.5:
+            warnings.append(f"{chain_name} linker: >50% hydrophobic - may cause aggregation issues")
+
+    return cleaned, warnings
+
+
+def validate_tmd_sequence(seq: str, chain_name: str) -> tuple[str, list[str]]:
+    """
+    Validate transmembrane domain sequence.
+
+    :param seq: The TMD sequence to validate.
+    :param chain_name: Name of the chain for warning messages.
+    :return: Tuple of (cleaned_sequence, warnings_list).
+    """
+    cleaned: str = seq.strip().upper().replace(" ", "")
+    warnings: list[str] = []
+
+    if not cleaned:
+        warnings.append(f"{chain_name} TMD: Sequence cannot be empty when custom TMD is enabled")
+        return "", warnings
+
+    # Enforce upper length limit of 200
+    if len(cleaned) > 200:
+        warnings.append(f"{chain_name} TMD: Exceeds maximum length (200 amino acids)")
+        cleaned = cleaned[:200]
+
+    # Warn about length (typical TMDs are 15-50 amino acids)
+    if len(cleaned) < 15:
+        warnings.append(f"{chain_name} TMD: Short sequence (<15 AA) - typical TMDs are 15-50 amino acids")
+
+    if len(cleaned) > 50:
+        warnings.append(f"{chain_name} TMD: Long sequence (>50 AA) - typical TMDs are 15-50 amino acids")
+
+    # Check for non-standard amino acids
+    VALID_AA: set[str] = set("ACDEFGHIKLMNPQRSTVWY*")
+    invalid_chars: set[str] = set(cleaned) - VALID_AA
+
+    if invalid_chars:
+        warnings.append(f"{chain_name} TMD: Contains non-standard amino acids: {', '.join(sorted(invalid_chars))}")
+
+    # Check for stop codons
+    if "*" in cleaned:
+        warnings.append(f"{chain_name} TMD: Contains stop codon(s). This may terminate translation")
+
+    # TMD quality checks (warnings)
+    if len(cleaned) > 0:
+        # TMDs should be predominantly hydrophobic
+        hydrophobic: int = sum(1 for aa in cleaned if aa in "AILMFVPW")
+        hydrophobic_ratio: float = hydrophobic / len(cleaned)
+
+        if hydrophobic_ratio < 0.5:
+            warnings.append(f"{chain_name} TMD: Low hydrophobicity ({hydrophobic_ratio:.1%}) - typical TMDs are >50% hydrophobic")
+
+        # Check for charged residues (can disrupt membrane insertion)
+        charged: int = sum(1 for aa in cleaned if aa in "DEKR")
+        charged_ratio: float = charged / len(cleaned)
+        if charged_ratio > 0.15:  # >15% charged residues
+            warnings.append(f"{chain_name} TMD: High charged residue content ({charged_ratio:.1%}) - may affect membrane insertion")
+
+    return cleaned, warnings
+
+
+def validate_custom_icd_sequence(seq: str) -> tuple[str, list[str]]:
+    """
+    Validate custom intracellular domain sequence.
+    Most permissive validation since ICDs vary widely.
+
+    :param seq: The ICD sequence to validate.
+    :return: Tuple of (cleaned_sequence, warnings_list).
+    """
+    cleaned: str = seq.strip().upper().replace(" ", "").replace("\n", "").replace("\r", "")
+    warnings: list[str] = []
+
+    if not cleaned:
+        return "", []  # Allow empty (user switches back to TEV design)
+
+    if len(cleaned) > 5000:
+        warnings.append("Custom ICD exceeds recommended length (5000 amino acids)")
+        cleaned = cleaned[:5000]
+
+    # Check for non-standard amino acids
+    VALID_AA: set[str] = set("ACDEFGHIKLMNPQRSTVWY*")
+    invalid_chars: set[str] = set(cleaned) - VALID_AA
+
+    if invalid_chars:
+        warnings.append(f"Contains non-standard amino acids: {', '.join(sorted(invalid_chars))}. This may affect sequence optimization")
+
+    # Check for internal stop codons
+    if "*" in cleaned:
+        internal_stops: int = cleaned.count("*")
+        warnings.append(f"Contains {internal_stops} internal stop codon(s) - this will terminate translation prematurely")
+
+    return cleaned, warnings
+
+
+def validate_protease_sequence(seq: str, protease_type: str) -> tuple[str, list[str]]:
+    """
+    Validate protease sequence (N-term, C-term, or complete).
+
+    :param seq: The sequence to validate.
+    :param protease_type: "N-terminal", "C-terminal", or "Complete" for error messages.
+    :return: Tuple of (cleaned_sequence, warnings_list).
+    """
+    cleaned: str = seq.strip().upper().replace(" ", "").replace("\n", "").replace("\r", "")
+    warnings: list[str] = []
+
+    if not cleaned:
+        warnings.append(f"{protease_type} protease: Sequence cannot be empty when custom protease is enabled")
+        return "", warnings
+
+    # Upper length limit of 1000
+    if len(cleaned) > 1000:
+        warnings.append(f"{protease_type} protease: Exceeds maximum length (1000 amino acids)")
+        cleaned = cleaned[:1000]
+
+    # Check for non-standard amino acids
+    VALID_AA: set[str] = set("ACDEFGHIKLMNPQRSTVWY*")
+    invalid_chars: set[str] = set(cleaned) - VALID_AA
+
+    if invalid_chars:
+        warnings.append(f"{protease_type} protease: Contains non-standard amino acids: {', '.join(sorted(invalid_chars))}")
+
+    # Warn about stop codons
+    if "*" in cleaned:
+        warnings.append(f"{protease_type} protease: Contains stop codon(s). This may terminate translation prematurely")
+
+    return cleaned, warnings
+
+
+def validate_prs_sequence(seq: str) -> tuple[str, list[str]]:
+    """
+    Validate protease recognition sequence.
+    PRS are typically 6-10 amino acids.
+
+    :param seq: The PRS sequence to validate.
+    :return: Tuple of (cleaned_sequence, warnings_list).
+    """
+    cleaned: str = seq.strip().upper().replace(" ", "")
+    warnings: list[str] = []
+
+    if not cleaned:
+        warnings.append("PRS sequence cannot be empty when custom PRS is enabled")
+        return "", warnings
+
+    if len(cleaned) > 50:
+        warnings.append("PRS exceeds maximum length (50 amino acids)")
+        cleaned = cleaned[:50]
+
+    # Check for non-standard amino acids
+    VALID_AA: set[str] = set("ACDEFGHIKLMNPQRSTVWY*")
+    invalid_chars: set[str] = set(cleaned) - VALID_AA
+
+    if invalid_chars:
+        warnings.append(f"Contains non-standard amino acids: {', '.join(sorted(invalid_chars))}")
+
+    # Check for stop codons
+    if "*" in cleaned:
+        warnings.append("Contains stop codon(s). This may affect protease recognition")
+
+    # Warn about unusually long PRS
+    if len(cleaned) > 12:
+        warnings.append("Unusually long PRS - most recognition sequences are 6-10 amino acids")
+
+    return cleaned, warnings
+
+
+def validate_cargo_sequence(seq: str) -> tuple[str, list[str]]:
+    """
+    Validate cargo sequence (most flexible - can be transcription factors, enzymes, etc.).
+
+    :param seq: The cargo sequence to validate.
+    :return: Tuple of (cleaned_sequence, warnings_list).
+    """
+    cleaned: str = seq.strip().upper().replace(" ", "").replace("\n", "").replace("\r", "")
+    warnings: list[str] = []
+
+    if not cleaned:
+        return "", []  # Allow empty (cargo is optional)
+
+    if len(cleaned) > 10000:
+        warnings.append("Cargo sequence exceeds maximum length (10,000 amino acids)")
+        cleaned = cleaned[:10000]
+
+    # Check for non-standard amino acids
+    VALID_AA: set[str] = set("ACDEFGHIKLMNPQRSTVWY*")
+    invalid_chars: set[str] = set(cleaned) - VALID_AA
+
+    if invalid_chars:
+        warnings.append(f"Contains non-standard amino acids: {', '.join(sorted(invalid_chars))}. This may affect sequence optimization")
+
+    # Warn about internal stop codons
+    if "*" in cleaned:
+        internal_stops: int = cleaned.count("*")
+        warnings.append(f"Contains {internal_stops} internal stop codon(s) - this may terminate translation prematurely")
+
+    # Warn about large cargo
+    if len(cleaned) > 2000:
+        warnings.append(f"Large cargo ({len(cleaned)} AA) - verify expression and folding will be successful")
+
+    return cleaned, warnings
+
+
+def validate_aip_sequence(seq: str) -> tuple[str, list[str]]:
+    """
+    Validate auto-inhibitory peptide sequence.
+    AIPs are typically 10-30 amino acids.
+
+    :param seq: The AIP sequence to validate.
+    :return: Tuple of (cleaned_sequence, warnings_list).
+    """
+    cleaned: str = seq.strip().upper().replace(" ", "")
+    warnings: list[str] = []
+
+    if not cleaned:
+        warnings.append("AIP sequence cannot be empty when custom AIP is enabled")
+        return "", warnings
+
+    if len(cleaned) > 50:
+        warnings.append("AIP exceeds recommended length (50 amino acids). Typical AIPs are 10-30 AA")
+        cleaned = cleaned[:50]
+
+    # Check for non-standard amino acids (warning, not error)
+    VALID_AA: set[str] = set("ACDEFGHIKLMNPQRSTVWY*")
+    invalid_chars: set[str] = set(cleaned) - VALID_AA
+
+    if invalid_chars:
+        warnings.append(f"Contains non-standard amino acids: {', '.join(sorted(invalid_chars))}")
+
+    # Warn about stop codons
+    if "*" in cleaned:
+        warnings.append("Contains stop codon(s). This may terminate translation prematurely")
+
+    return cleaned, warnings
+
+
+def display_warnings(warnings: list[str], component_key: str) -> None:
+    """
+    Display validation warnings and store them in session state for summary.
+
+    :param warnings: List of warning messages to display.
+    :param component_key: Unique key to identify the component (e.g., "chain_a_binder").
+    :return: None
+    """
+    if warnings:
+        # Store warnings in session state for summary
+        state.validation_warnings[component_key] = warnings
+
+        # Display warnings immediately
+        for warning in warnings:
+            st.warning(warning, icon="⚠️")
+    else:
+        # Clear warnings if sequence is now valid
+        if component_key in state.validation_warnings:
+            del state.validation_warnings[component_key]
+
 
 def update_chain_highlight_selection(chain_id_to_toggle: str, current_pdb_selection: str) -> None:
     """
@@ -207,43 +607,57 @@ def generate_download() -> None:
                 # Handle annotated parts (tuples: (sequence, name, color)).
                 if isinstance(part, tuple):
                     if len(part[0]) > 0: # Ensure the sequence part is not empty.
-                        # Add a sequence feature for annotated parts, calculating start/end in base pairs (x3 for DNA).
-                        record_features.append(SeqFeature(location=FeatureLocation(start=len(record_sequence)*3,
-                                                                                   end=(len(record_sequence) + len(part[0]))*3),
+                        # Define a feature qualifier dictionary with the name and translation (if using sequence optimization).
+                        qualifiers: dict[str, str] = {"name": part[1], "translation": part[0]} if state.sequence_optimization_toggle else {"name": part[1]}
+                        # Add a sequence feature for annotated parts, calculating start/end in base pairs (x3 for DNA when using sequence optimization).
+                        record_features.append(SeqFeature(location=FeatureLocation(start=(len(record_sequence) * (3 if state.sequence_optimization_toggle else 1)),
+                                                                                   end=(len(record_sequence) + len(part[0])) * (3 if state.sequence_optimization_toggle else 1)),
                                                           type="CDS", # Coding Sequence type
-                                                          qualifiers={"name": part[1], "translation": part[0]})) # Store name and amino acid translation.
+                                                          qualifiers=qualifiers)) # Store name and amino acid translation.
                         record_sequence += part[0] # Append amino acid sequence.
 
                 else: # Handle non-annotated string parts (e.g., linkers not specifically annotated).
                     if len(part) > 0: # Ensure the string part is not empty.
                         record_sequence += part # Append amino acid sequence.
 
-            # Perform sequence optimization using dnachisel.
-            # Reverse translate the amino acid sequence to DNA.
-            sequence = dnachisel.reverse_translate(record_sequence)
-            # Define constraints: avoid specified restriction sites and enforce translation.
-            cons = [dnachisel.AvoidPattern(pat+"_site") for pat in state.optimization_settings["restriction_enzymes"]]
-            cons.append(dnachisel.EnforceTranslation())
-            # Create a DNA optimization problem.
-            problem = dnachisel.DnaOptimizationProblem(sequence = sequence, constraints = cons, objectives = [dnachisel.CodonOptimize(species=state.optimization_settings["species"], method="match_codon_usage")])
-            # Resolve constraints and optimize the DNA sequence.
-            problem.resolve_constraints(final_check = True)
-            problem.optimize()
-            # Get the optimized sequence as a SeqRecord.
-            recordseq: SeqRecord = problem.to_record()
+            # Define a clean file name for the GenBank file.
+            file_name: str = f"{key.replace(' ', '_').replace(':', '').replace('-', '_').replace('/', '_')}.gb"
 
-            # Create the final SeqRecord for GenBank output.
-            record: SeqRecord = SeqRecord(recordseq.seq, # Use the optimized DNA sequence.
-                               id=record_name,
-                               name=record_name,
-                               description=record_name,
-                               features=record_features,
-                               annotations={"molecule_type": "DNA"}) # Specify molecule type as DNA.
+            if state.sequence_optimization_toggle:
+                # Perform sequence optimization using dnachisel.
+                # Reverse translate the amino acid sequence to DNA.
+                sequence = dnachisel.reverse_translate(record_sequence)
+                # Define constraints: avoid specified restriction sites and enforce translation.
+                cons = [dnachisel.AvoidPattern(pat+"_site") for pat in state.optimization_settings["restriction_enzymes"]]
+                cons.append(dnachisel.EnforceTranslation())
+                # Create a DNA optimization problem.
+                problem = dnachisel.DnaOptimizationProblem(sequence = sequence, constraints = cons, objectives = [dnachisel.CodonOptimize(species=state.optimization_settings["species"], method="match_codon_usage")])
+                # Resolve constraints and optimize the DNA sequence.
+                problem.resolve_constraints(final_check = True)
+                problem.optimize()
+                # Get the optimized sequence as a SeqRecord.
+                recordseq: SeqRecord = problem.to_record()
+
+                # Create the final SeqRecord for GenBank output.
+                record: SeqRecord = SeqRecord(recordseq.seq, # Use the optimized DNA sequence.
+                                   id=record_name,
+                                   name=record_name,
+                                   description=record_name,
+                                   features=record_features,
+                                   annotations={"molecule_type": "DNA"}) # Specify molecule type as DNA.
+
+            else:
+                # Create the final SeqRecord for GenBank output.
+                record: SeqRecord = SeqRecord(Seq(record_sequence), # Use the unoptimized amino acid sequence.
+                                              id=record_name,
+                                              name=record_name,
+                                              description=record_name,
+                                              features=record_features,
+                                              annotations={"molecule_type": "PROTEIN"}) # Specify molecule type as protein.
+
             # Write the GenBank record to a temporary string buffer.
             tmp_file: io.StringIO = io.StringIO()
             SeqIO.write(record, tmp_file, "genbank")
-            # Define a clean file name for the GenBank file.
-            file_name: str = f"{key.replace(' ', '_').replace(':', '').replace('-', '_').replace('/', '_')}.gb"
             # Add the GenBank file to the ZIP archive.
             zf.writestr(file_name, tmp_file.getvalue())
 
@@ -278,11 +692,100 @@ def generate_download() -> None:
             state.sabdab.to_csv(s)
             zf.writestr("sabdab_data.csv", s.getvalue())
 
+        # Add mandatory references file
+        references_content: str = """MESA Designer - References and Citations
+==========================================
+
+Built by: iGEM Munich 2025 Team
+
+Key Scientific References:
+
+1. MESA Receptor Framework (Original):
+   Daringer, N.M., Dudek, R.M., Schwarz, K.A., Leonard, J.N. (2014)
+   "Modular Extracellular Sensor Architecture for Engineering Mammalian Cell-based Devices"
+   ACS Synthetic Biology
+   DOI: https://pubs.acs.org/doi/10.1021/sb400128g
+
+2. MESA Applied to Human Cells:
+   Schwarz, K.A., Daringer, N.M., Dolberg, T.B., Leonard, J.N. (2017)
+   "Rewiring human cellular input-output using modular extracellular sensors"
+   Nature Chemical Biology
+   PubMed: https://pubmed.ncbi.nlm.nih.gov/27941759/
+
+3. Elucidation and Refinement of Synthetic Receptor Mechanisms:
+   Edelstein, H.I., Donahue, P.S., Muldoon, J.J., Kang, A.K., Dolberg, T.B., Battaglia, L.M., Allchin, E.R., Hong, M., Leonard, J.N. (2020)
+   "Elucidation and refinement of synthetic receptor mechanisms"
+   Synthetic Biology, 5(1), ysaa017
+   DOI: https://doi.org/10.1093/synbio/ysaa017
+   PubMed: https://pubmed.ncbi.nlm.nih.gov/33392392/
+
+4. SAbDab - Structural Antibody Database:
+   Dunbar, J., Krawczyk, K. et al. (2014)
+   "SAbDab: the structural antibody database"
+   Nucleic Acids Research, 42, D1140-D1146
+   DOI: https://academic.oup.com/nar/article/42/D1/D1140/1044118
+
+5. SKEMPI 2.0 - Protein Interaction Database:
+   Jankauskaitė, J., Jiménez-García, B., Dapkūnas, J., Fernández-Recio, J., Moal, I.H. (2019)
+   "SKEMPI 2.0: an updated benchmark of changes in protein–protein binding energy, kinetics and thermodynamics upon mutation"
+   Bioinformatics, 35(3):462-469
+   DOI: https://academic.oup.com/bioinformatics/article/35/3/462/5055583
+
+Acknowledgments:
+We thank all contributors and the scientific community for making this work possible.
+"""
+        zf.writestr("REFERENCES.txt", references_content)
+
     # Reset the buffer's position to the beginning after writing all data.
     zip_buffer.seek(0)
 
     # Store the complete ZIP file content in the session state for download.
     state.download_data = zip_buffer.getvalue()
+
+
+# cache for better performance as users typically switch back and forth, thus allowing for previous determinations to be re-used
+@st.cache_data(show_spinner=False)
+def enable_sequence_optimization(sequences: list[str], legal_amino_acids: set[str]) -> bool:
+    """
+    This function takes a list of sequences and determines whether sequence optimization is possible.
+    :param sequences: A list of sequences.
+    :param legal_amino_acids: A set of legal amino acid characters.
+    :return: True if sequence optimization is possible, False otherwise.
+    """
+    # check if any of the sequences contain illegal characters
+    for seq in sequences:
+        seq_letters: set[str] = set(letter for letter in seq)
+        for aa in seq_letters:
+            if aa not in legal_amino_acids:
+                print(f"Sequence optimization is not possible due to illegal character in sequence: {seq}; aa: {aa}")
+                return False
+
+    # return true otherwise
+    return True
+
+
+# cache due to frequent repeats of same sequence
+@st.cache_data(show_spinner=False)
+def get_unannotated_construct_list(annotated_construct_list: dict[str, list[str | tuple[str, str] | tuple[str, str, str]]]) -> dict[str, str]:
+    construct_list_unformatted = {}
+    for key, construct in annotated_construct_list.items():
+        construct_sequence = ""
+        for part in construct[1:]:
+            if part == "":  # Skip empty parts.
+                continue
+
+            # Handle annotated parts (tuples: (sequence, name, color)).
+            if isinstance(part, tuple):
+                if len(part[0]) > 0:  # Ensure the sequence part is not empty.
+                    construct_sequence += part[0]  # Append amino acid sequence.
+
+            else:  # Handle non-annotated string parts (e.g., linkers not specifically annotated).
+                if len(part) > 0:  # Ensure the string part is not empty.
+                    construct_sequence += part  # Append amino acid sequence.
+
+        construct_list_unformatted[key] = construct_sequence
+
+    return construct_list_unformatted
 
 
 # Streamlit app configuration and theme management.
@@ -394,8 +897,6 @@ if state.themes["refreshed"] == False:
     state.themes["refreshed"] = True
     st.rerun()
 
-# Set Streamlit page configuration (title, layout, icon).
-st.set_page_config(page_title="MESA-Designer", layout="wide", page_icon="🧬")
 # Get the current browser window width using JavaScript to adjust PDB display size.
 page_width = streamlit_js_eval(js_expressions="window.innerWidth", key="WIDTH", want_output=True)
 
@@ -429,8 +930,10 @@ if not custom_binder:
 
     # Perform search if the search button is clicked or if the search query has changed.
     if search_button or (search_field and state.prev_search != search_field):
-        if not search_field:
-            st.error("Please enter a search query")
+        is_valid, error_msg = validate_search_query(search_field)
+
+        if not is_valid:
+            st.error(error_msg)
         else:
             # Display a spinner while searching and call the antibody search function.
             with st.spinner(f"Searching for: **{search_field}**"):
@@ -699,7 +1202,12 @@ elif state.custom_binder_toggle:
             max_chars=5000
         )
 
-        state.chain_sequences["Chain A"] = chain_a_text_input # Store input in session state.
+        if chain_a_text_input:
+            cleaned_a, warnings_a = validate_protein_sequence(chain_a_text_input, "Chain A")
+            display_warnings(warnings_a, "chain_a_binder")
+            state.chain_sequences["Chain A"] = cleaned_a
+        else:
+            state.chain_sequences["Chain A"] = ""
 
     with binder_chain_columns[1]:
         st.subheader("Chain B")
@@ -711,7 +1219,12 @@ elif state.custom_binder_toggle:
             max_chars=5000
         )
 
-        state.chain_sequences["Chain B"] = chain_b_text_input # Store input in session state.
+        if chain_b_text_input:
+            cleaned_b, warnings_b = validate_protein_sequence(chain_b_text_input, "Chain B")
+            display_warnings(warnings_b, "chain_b_binder")
+            state.chain_sequences["Chain B"] = cleaned_b
+        else:
+            state.chain_sequences["Chain B"] = ""
 
     # Build a FASTA-like preview string for custom binder sequences.
     if len(chain_a_text_input) > 0:
@@ -748,6 +1261,11 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                 value="GGGS",
                 max_chars=1000
             )
+
+            if linker_input:
+                cleaned_pattern, pattern_warnings = validate_linker_pattern(linker_input)
+                display_warnings(pattern_warnings, f"{chain_id}_linker_pattern")
+
         with linker_columns[1]:
             # Number input for how many times the pattern should be repeated.
             linker_repeats: int = st.number_input(
@@ -778,6 +1296,13 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
             max_chars=1000
         )
 
+        if state.linkers.get(f"{chain_id}_linker"):
+            cleaned_linker, linker_warnings = validate_linker_sequence(
+                state.linkers[f"{chain_id}_linker"],
+                chain_id
+            )
+            display_warnings(linker_warnings, f"{chain_id}_linker_sequence")
+
 ### TMD picker #########################################################################################################
 # This section allows selection/design of Transmembrane Domain (TMD) sequences.
 if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain B"]) > 0:
@@ -803,6 +1328,8 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         # Display informational text if not using a custom TMD.
         if not custom_tmd:
             st.info("You can base your choice of TMDs on this [Paper](https://pubmed.ncbi.nlm.nih.gov/33392392/) and its [supplementary data](https://pmc.ncbi.nlm.nih.gov/articles/PMC7759213/#sup1).")
+
+        st.info("Use [TMDock](https://membranome.org/tmdock) to predict TMD agglomeration and relative positioning.")
 
         # Create columns for TMD selection/input for each active chain.
         tmd_sequence_cols = st.columns(len([chain_id for chain_id in state.chain_sequences if len(state.chain_sequences[chain_id]) > 0]))
@@ -839,6 +1366,11 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                         max_chars=1000,
                         key=f"{chain_id}_tmd_sequence"
                     )
+
+                    if custom_tmd and tmd_sequence:
+                        cleaned_tmd, tmd_warnings = validate_tmd_sequence(tmd_sequence, chain_id)
+                        display_warnings(tmd_warnings, f"{chain_id}_tmd")
+
             # Store the selected/entered TMD sequence in session state.
             state.tmds[f"{chain_id}_tmd"] = TMD_DATA[state[f"{chain_id[-1]}_tmd_selection"]][1] if not custom_tmd else state[f"{chain_id}_tmd_sequence"]
 
@@ -869,6 +1401,10 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
             label_visibility="collapsed",
             key="custom_icd_sequence"
         )
+
+        if custom_icd_sequence:
+            cleaned_icd, icd_warnings = validate_custom_icd_sequence(custom_icd_sequence)
+            display_warnings(icd_warnings, "custom_icd")
 
     # TEV-Protease ICD Design section.
     else:
@@ -996,8 +1532,7 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                                         state.protease_chain_association["c"].remove(chain_id)
                 else: # Custom split protease input.
                     st.markdown("#### Custom Protease")
-                    st.info(
-                        "You can use [SPELL](https://dokhlab.med.psu.edu/spell/login.php) to guide your splitting process!")
+                    st.info("You can use [SPELL](https://dokhlab.med.psu.edu/spell/login.php) to guide your splitting process!")
 
                     # Columns for custom N-terminus and C-terminus input.
                     split_n_col, split_c_col = st.columns(2)
@@ -1015,6 +1550,10 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                             key="n_protease_sequence_entry"
                         )
 
+                        if n_protease_sequence_entry:
+                            cleaned_n, warnings_n = validate_protease_sequence(n_protease_sequence_entry, "N-terminal")
+                            display_warnings(warnings_n, "n_protease")
+
                     with split_c_col:
                         st.markdown("##### C-Terminus")
                         # Text area for custom C-terminal protease sequence.
@@ -1027,6 +1566,10 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                             label_visibility="collapsed",
                             key="c_protease_sequence_entry"
                         )
+
+                        if c_protease_sequence_entry:
+                            cleaned_c, warnings_c = validate_protease_sequence(c_protease_sequence_entry, "C-terminal")
+                            display_warnings(warnings_c, "c_protease")
 
             # Logic for complete protease design (not split).
             else:
@@ -1085,6 +1628,10 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                         key="custom_protease_sequence"
                     )
 
+                    if complete_protease_sequence:
+                        cleaned_complete, warnings_complete = validate_protease_sequence(complete_protease_sequence, "Complete")
+                        display_warnings(warnings_complete, "complete_protease")
+
         # Cargo design section.
         st.subheader("Cargo Design")
         cargo_design_container = st.container(border=True) # Container for cargo design options.
@@ -1136,6 +1683,10 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                     placeholder="Enter PRS sequence"
                 )
 
+                if prs_sequence:
+                    cleaned_prs, prs_warnings = validate_prs_sequence(prs_sequence)
+                    display_warnings(prs_warnings, "custom_prs")
+
             # Cargo sequence input.
             st.markdown("#### Cargo Sequence")
             cargo_sequence: str = st.text_area(
@@ -1147,6 +1698,10 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                 max_chars=10000,
                 key="cargo_sequence"
             )
+
+            if cargo_sequence:
+                cleaned_cargo, cargo_warnings = validate_cargo_sequence(cargo_sequence)
+                display_warnings(cargo_warnings, "cargo")
 
             # Associate cargo to specific chains.
             st.markdown("##### Append to Chain")
@@ -1227,6 +1782,10 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                         placeholder="Enter AIP sequence",
                         key="custom_aip_sequence"
                     )
+
+                    if aip_sequence:
+                        cleaned_aip, aip_warnings = validate_aip_sequence(aip_sequence)
+                        display_warnings(aip_warnings, "custom_aip")
 
                 # Associate AIP with chains.
                 st.markdown("##### Append to Chain")
@@ -1439,6 +1998,30 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                 height="content"
             )
 
+    if state.validation_warnings:
+        st.divider()
+        st.header("⚠️ Validation Warnings Summary")
+
+        with st.expander("View All Validation Warnings", expanded=False):
+            warning_container = st.container(border=True)
+
+            with warning_container:
+                st.markdown("**The following warnings were detected in your design:**")
+                st.markdown("---")
+
+                for component_key, warnings in state.validation_warnings.items():
+                    component_name = component_key.replace("_", " ").title()
+
+                    st.markdown(f"**{component_name}:**")
+                    for warning in warnings:
+                        st.warning(warning, icon="⚠️")
+                    st.markdown("---")
+
+                st.info("""
+                    **Note:** These are warnings, not errors. Your design can still be downloaded.
+                    However, sequences with warnings may not be suitable for sequence optimization or may have issues during expression.
+                """)
+
     st.header("Downloads", anchor="Downloads")
     download_container = st.container(border=True) # Container for download options.
     with download_container:
@@ -1561,6 +2144,9 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         # Store the assembled formatted construct list in session state.
         state.construct_list_formatted = construct_list
 
+        # Update state with new constructs
+        state.construct_list_unformatted = get_unannotated_construct_list(construct_list)
+
         # Display constructs for user review and selection for download.
         st.subheader("Construct Overview")
 
@@ -1581,37 +2167,48 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                         key=f"{key}_checkbox",
                         label_visibility="collapsed"
                     )
-        st.subheader("Sequence Optimization")
-        with st.container(border=True):
-            optimization_cols = st.columns(2)
-            with optimization_cols[0]:
-                # Select box for predefined restriction site avoidance options.
-                option = st.selectbox("Avoid Restriction Sites", ("RFC10", "RFC12", "RFC1000", "iGEM BioBrick Full", "iGEM BioBrick Full + SacI, NcoI, KpnI, HindIII", "Custom"))
 
-                state.optimization_settings["sel"] = option # Store selected option.
-            with optimization_cols[1]:
-                # Select box for species to optimize codon usage for.
-                species = st.selectbox("Select Species to optimize", ("H. Sapiens", "M. Musculus", "D. Melanogaster", "G. Gallus")).replace(". ", "_").lower()
-                state.optimization_settings["species"] = species # Store selected species.
+        # Sequence Optimization (example: compliance with iGEM regulations)
+        st.toggle(
+            label="Sequence Optimization",
+            value=enable_sequence_optimization(list(state.construct_list_unformatted.values()), LEGAL_AMINO_ACIDS),
+            key="sequence_optimization_toggle",
+            help="Options to create optimized nucleotide sequences from MESA Chains. Example: Target Organism: Human; Restriction Sites to avoid: BioBrick RFC[10] (iGEM)",
+            disabled=not enable_sequence_optimization(list(state.construct_list_unformatted.values()), LEGAL_AMINO_ACIDS),
+        )
 
-            if state.optimization_settings["sel"] == "Custom":
-                # Multiselect for adding custom restriction enzymes if "Custom" option is chosen.
-                opt = st.multiselect("Add Restriction Enzyme", rest_dict.keys(), key="restriction_add")
-                if opt:
-                    state.optimization_settings["custom_enzymes"] = opt # Store custom enzymes.
-                    cols = st.columns(3)
-                    with cols[0]:
-                        st.markdown("#### Restriction Enzyme")
-                        for enzyme in state.optimization_settings["custom_enzymes"]:
-                            st.write(enzyme) # Display selected enzyme names.
-                    with cols[1]:
-                        st.markdown("#### Restriction Site")
-                        for enzyme in state.optimization_settings["custom_enzymes"]:
-                            st.write(rest_dict[enzyme]["site"]) # Display their recognition sites.
-                    state.optimization_settings["restriction_enzymes"] = state.optimization_settings["custom_enzymes"]
-            else:
-                # If a predefined option is chosen, use its corresponding restriction sites.
-                state.optimization_settings["restriction_enzymes"] = rest_sites[state.optimization_settings["sel"]]
+        if state.sequence_optimization_toggle:
+            st.subheader("Sequence Optimization")
+            with st.container(border=True):
+                optimization_cols = st.columns(2)
+                with optimization_cols[0]:
+                    # Select box for predefined restriction site avoidance options.
+                    option = st.selectbox("Avoid Restriction Sites", ("RFC10", "RFC12", "RFC1000", "iGEM BioBrick Full", "iGEM BioBrick Full + SacI, NcoI, KpnI, HindIII", "Custom"))
+
+                    state.optimization_settings["sel"] = option # Store selected option.
+                with optimization_cols[1]:
+                    # Select box for species to optimize codon usage for.
+                    species = st.selectbox("Select Species to optimize", ("H. Sapiens", "M. Musculus", "D. Melanogaster", "G. Gallus")).replace(". ", "_").lower()
+                    state.optimization_settings["species"] = species # Store selected species.
+
+                if state.optimization_settings["sel"] == "Custom":
+                    # Multiselect for adding custom restriction enzymes if "Custom" option is chosen.
+                    opt = st.multiselect("Add Restriction Enzyme", rest_dict.keys(), key="restriction_add")
+                    if opt:
+                        state.optimization_settings["custom_enzymes"] = opt # Store custom enzymes.
+                        cols = st.columns(3)
+                        with cols[0]:
+                            st.markdown("#### Restriction Enzyme")
+                            for enzyme in state.optimization_settings["custom_enzymes"]:
+                                st.write(enzyme) # Display selected enzyme names.
+                        with cols[1]:
+                            st.markdown("#### Restriction Site")
+                            for enzyme in state.optimization_settings["custom_enzymes"]:
+                                st.write(rest_dict[enzyme]["site"]) # Display their recognition sites.
+                        state.optimization_settings["restriction_enzymes"] = state.optimization_settings["custom_enzymes"]
+                else:
+                    # If a predefined option is chosen, use its corresponding restriction sites.
+                    state.optimization_settings["restriction_enzymes"] = REST_SITES[state.optimization_settings["sel"]]
 
         # Include additional files in the download.
         st.subheader("Additional Files")
@@ -1655,3 +2252,22 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         #        file_name="mesa-design.zip",
         #        mime="application/zip"
         #    )
+
+# Footer with references
+st.divider()
+st.markdown("""
+<div style="text-align: center; padding: 20px; font-size: 0.9em; color: #666;">
+    <p><strong>MESA Designer</strong> - Built by iGEM Munich 2025</p>
+    <p style="margin-top: 10px;">
+        <strong>Key References:</strong><br>
+        <a href="https://pubs.acs.org/doi/10.1021/sb400128g" target="_blank">Daringer et al. (2014) - ACS Synthetic Biology</a> |
+        <a href="https://pubmed.ncbi.nlm.nih.gov/27941759/" target="_blank">Schwarz et al. (2017) - Nature Chemical Biology</a> |
+        <a href="https://pubmed.ncbi.nlm.nih.gov/33392392/" target="_blank">Edelstein et al. (2020) - Synthetic Biology</a><br>
+        <a href="https://academic.oup.com/nar/article/42/D1/D1140/1044118" target="_blank">SAbDab - Dunbar et al. (2014)</a> |
+        <a href="https://academic.oup.com/bioinformatics/article/35/3/462/5055583" target="_blank">SKEMPI 2.0 - Jankauskaitė et al. (2019)</a>
+    </p>
+    <p style="margin-top: 15px; font-size: 0.85em;">
+        We thank all contributors and the scientific community for making this work possible.
+    </p>
+</div>
+""", unsafe_allow_html=True)

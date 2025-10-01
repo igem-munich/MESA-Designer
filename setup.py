@@ -69,7 +69,7 @@ if not download_file("https://opig.stats.ox.ac.uk/webapps/sabdab-sabpred/sabdab/
 # if successful, create a new sqlite3 database and necessary parent directories. then create a "main" table and insert all data from the csv file into the table
 print("Creating sqlite3 database...")
 Path.mkdir(Path("./data"), parents=True, exist_ok=True)
-conn: sqlite3.Connection = create_database("./data/sabdab_summary_all.sqlite")
+conn: sqlite3.Connection | None = create_database("./data/sabdab_summary_all.sqlite")
 header: list[str]
 data: list[list[str]]
 header, data = read_csv("./files/sabdab_summary_all.tsv", "\t")

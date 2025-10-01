@@ -182,9 +182,44 @@ helpful if it requires external setup, such as starting a Selenium server for te
 
 ## Authors and acknowledgment
 Show your appreciation to those who have contributed to the project.  
-streamlit  
-mesa papers  
+streamlit   
 biopython
+
+Key Scientific References:
+
+1. MESA Receptor Framework (Original):
+   Daringer, N.M., Dudek, R.M., Schwarz, K.A., Leonard, J.N. (2014)
+   "Modular Extracellular Sensor Architecture for Engineering Mammalian Cell-based Devices"
+   ACS Synthetic Biology
+   DOI: https://pubs.acs.org/doi/10.1021/sb400128g
+
+2. MESA Applied to Human Cells:
+   Schwarz, K.A., Daringer, N.M., Dolberg, T.B., Leonard, J.N. (2017)
+   "Rewiring human cellular input-output using modular extracellular sensors"
+   Nature Chemical Biology
+   PubMed: https://pubmed.ncbi.nlm.nih.gov/27941759/
+
+3. Elucidation and Refinement of Synthetic Receptor Mechanisms:
+   Edelstein, H.I., Donahue, P.S., Muldoon, J.J., Kang, A.K., Dolberg, T.B., Battaglia, L.M., Allchin, E.R., Hong, M., Leonard, J.N. (2020)
+   "Elucidation and refinement of synthetic receptor mechanisms"
+   Synthetic Biology, 5(1), ysaa017
+   DOI: https://doi.org/10.1093/synbio/ysaa017
+   PubMed: https://pubmed.ncbi.nlm.nih.gov/33392392/
+
+4. SAbDab - Structural Antibody Database:
+   Dunbar, J., Krawczyk, K. et al. (2014)
+   "SAbDab: the structural antibody database"
+   Nucleic Acids Research, 42, D1140-D1146
+   DOI: https://academic.oup.com/nar/article/42/D1/D1140/1044118
+
+5. SKEMPI 2.0 - Protein Interaction Database:
+   Jankauskaitė, J., Jiménez-García, B., Dapkūnas, J., Fernández-Recio, J., Moal, I.H. (2019)
+   "SKEMPI 2.0: an updated benchmark of changes in protein–protein binding energy, kinetics and thermodynamics upon mutation"
+   Bioinformatics, 35(3):462-469
+   DOI: https://academic.oup.com/bioinformatics/article/35/3/462/5055583
+
+Acknowledgments:
+We thank all contributors and the scientific community for making this work possible.
 
 ## Design Outline
 [Design Doc](https://docs.google.com/document/d/1ciPsgLo5JNp7wKqFREEnWSCiShK2ZrRBRCNdM3VBm_A/edit?tab=t.0)
