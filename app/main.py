@@ -829,7 +829,7 @@ def get_cached_pdb_from_rcsb(pdb_id: str) -> str | None:
 
 # update scroll navigation
 @st.cache_data(show_spinner=False)
-def update_scroll_navigation(transmembrane_design: bool, split_design: bool, protease_release_design: bool, cargo_release_design: bool, valine_design: bool) -> tuple[dict[str, str], list[str]]:
+def update_scroll_navigation(transmembrane_design: bool, split_design: bool, protease_release_design: bool, cargo_release_design: bool, valine_design: bool, custom_icd: bool) -> tuple[dict[str, str], list[str]]:
     """
     Due to infrequent updates this function caches its output, this, however, requires all relevant parameters to be passed in.
     :param transmembrane_design: Intracellular Mesa or transmembrane design.
@@ -861,7 +861,10 @@ def update_scroll_navigation(transmembrane_design: bool, split_design: bool, pro
         anchor_icons.append(open(f"resources/imgs/tmd{'_valine' if valine_design else ''}.svg").read())  # insert correct tmd image between ecd_linker and next component
 
     # insert correct icd image
-    anchor_icons.append(open(f"resources/imgs/{'split_tev' if split_design else 'complete_tev'}_{'no_protease_release' if not protease_release_design else 'protease_release'}_{'cargo_release' if cargo_release_design else 'no_cargo_release'}.svg").read())
+    if not custom_icd:
+        anchor_icons.append(open(f"resources/imgs/{'split_tev' if split_design else 'complete_tev'}_{'no_protease_release' if not protease_release_design else 'protease_release'}_{'cargo_release' if cargo_release_design else 'no_cargo_release'}.svg").read())
+    else:
+        anchor_icons.append(open(f"resources/imgs/custom_icd.svg").read())
 
     # add download image
     anchor_icons.append(open("resources/imgs/download.svg").read())
@@ -1396,18 +1399,22 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
 
     # Custom ICD design input.
     if custom_icd:
-        st.subheader("Enter ICD Sequence")
-        custom_icd_sequence: str = st.text_area(
-            label="Custom ICD",
-            value="",
-            height="content",
-            label_visibility="collapsed",
-            key="custom_icd_sequence"
-        )
+        custom_icd_cols = st.columns(len([chain_id for chain_id in state.chain_sequences if len(state.chain_sequences[chain_id]) > 0]))
 
-        if custom_icd_sequence:
-            cleaned_icd, icd_warnings = validate_custom_icd_sequence(custom_icd_sequence)
-            display_warnings(icd_warnings, "custom_icd")
+        for i, chain_id in enumerate([chain_id for chain_id in state.chain_sequences if len(state.chain_sequences[chain_id]) > 0]):
+            with custom_icd_cols[i]:
+                st.subheader(f"Enter {chain_id} ICD Sequence")
+                custom_icd_sequence: str = st.text_area(
+                    label="Custom ICD",
+                    value="",
+                    height="content",
+                    label_visibility="collapsed",
+                    key=f"custom_icd_sequence_{chain_id}"
+                )
+
+                if custom_icd_sequence:
+                    cleaned_icd, icd_warnings = validate_custom_icd_sequence(custom_icd_sequence)
+                    display_warnings(icd_warnings, f"custom_icd_{chain_id}")
 
     # TEV-Protease ICD Design section.
     else:
@@ -1927,13 +1934,17 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
         # ICD overview.
         st.divider()
         if state.custom_icd_toggle:
-            st.subheader("Custom ICD")
-            st.code(
-                state.custom_icd_sequence, # Display the custom ICD sequence.
-                language="text",
-                wrap_lines=True,
-                height="content"
-            )
+            custom_icd_cols = st.columns(len([chain_id for chain_id in state.chain_sequences if len(state.chain_sequences[chain_id]) > 0]))
+
+            for i, chain_id in enumerate([chain_id for chain_id in state.chain_sequences if len(state.chain_sequences[chain_id]) > 0]):
+                with custom_icd_cols[i]:
+                    st.subheader(f"{chain_id} Custom ICD")
+                    st.code(
+                        state[f"custom_icd_sequence_{chain_id}"], # Display the custom ICD sequence.
+                        language="text",
+                        wrap_lines=True,
+                        height="content"
+                    )
         else:
             if state.split_protease_toggle:
                 st.subheader("Split Protease Overview")
@@ -2055,78 +2066,87 @@ if len(state.chain_sequences["Chain A"]) > 0 or len(state.chain_sequences["Chain
                     # Insert tags at position 2 (after initial M/Signal Peptide, before Binder).
                     current_chain.insert(2, (TAG_SEQS[tag][1], f"{tag} Tag", "#26B771FF"))
 
-            # Logic for split protease design.
-            if state.split_protease_toggle:
-                if chain_id in state.protease_chain_association["n"]:
-                    # Construct N-term protease chain.
-                    construct_list[f"{chain_id}_N-Term Protease"] = ([f"> {chain_id}_N-Term Protease{'_CARGO' if chain_id in state.cargo_chain_association else ''}\n\n"]
-                                                                     + current_chain
-                                                                     # PRS if protease release is toggled.
-                                                                     + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if state.release_protease_toggle else ""]
-                                                                     + ["GGGSGGGS" if state.release_protease_toggle else ""]
-                                                                     # N-term protease sequence.
-                                                                     + [(NTEV_DATA[state.n_protease_selection][1] if not state.custom_protease_toggle else state.n_protease_sequence_entry, "N-Term Protease", "#bfbd40")]
-                                                                     # Linker and PRS/Cargo if release cargo is toggled and cargo is associated.
-                                                                     + ["GGGSGGGS" if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
-                                                                     + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
-                                                                     + ["GGGSGGGS" if chain_id in state.cargo_chain_association else ""]
-                                                                     + [(state.cargo_sequence, "Cargo", "#bd4258") if chain_id in state.cargo_chain_association else ""]
-                                                                     + ["*" if not chain_id in state.aip_chain_association else ""] # Stop codon if no AIP
-                                                                     )
+            # Logic for custom ICD.
+            if state.custom_icd_toggle:
+                if f"custom_icd_sequence_{chain_id}" in state:
+                    construct_list[f"{chain_id}"] = ([f"> {chain_id}"]
+                                                     + current_chain
+                                                     + [(state[f"custom_icd_sequence_{chain_id}"], "Custom_ICD", "#E4A24CFF")]
+                                                     + ["*" if len(state[f"custom_icd_sequence_{chain_id}"]) > 0 and not state[f"custom_icd_sequence_{chain_id}"][-1] == "*" else ""])
 
-                    # Append AIP if associated with this chain.
-                    if chain_id in state.aip_chain_association:
-                        construct_list[f"{chain_id}_N-Term Protease"].append("GGGSGGGS")
-                        construct_list[f"{chain_id}_N-Term Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
-                        construct_list[f"{chain_id}_N-Term Protease"].append("*")
+            else:
+                # Logic for split protease design.
+                if state.split_protease_toggle:
+                    if chain_id in state.protease_chain_association["n"]:
+                        # Construct N-term protease chain.
+                        construct_list[f"{chain_id}_N-Term Protease"] = ([f"> {chain_id}_N-Term Protease{'_CARGO' if chain_id in state.cargo_chain_association else ''}\n\n"]
+                                                                         + current_chain
+                                                                         # PRS if protease release is toggled.
+                                                                         + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if state.release_protease_toggle else ""]
+                                                                         + ["GGGSGGGS" if state.release_protease_toggle else ""]
+                                                                         # N-term protease sequence.
+                                                                         + [(NTEV_DATA[state.n_protease_selection][1] if not state.custom_protease_toggle else state.n_protease_sequence_entry, "N-Term Protease", "#bfbd40")]
+                                                                         # Linker and PRS/Cargo if release cargo is toggled and cargo is associated.
+                                                                         + ["GGGSGGGS" if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
+                                                                         + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
+                                                                         + ["GGGSGGGS" if chain_id in state.cargo_chain_association else ""]
+                                                                         + [(state.cargo_sequence, "Cargo", "#bd4258") if chain_id in state.cargo_chain_association else ""]
+                                                                         + ["*" if not chain_id in state.aip_chain_association else ""] # Stop codon if no AIP
+                                                                         )
 
-                elif chain_id in state.protease_chain_association["c"]:
-                    # Construct C-term protease chain.
-                    construct_list[f"{chain_id}_C-Term Protease"] = ([f"> {chain_id}_C-Term Protease{'_CARGO' if chain_id in state.cargo_chain_association else ''}\n\n"]
-                                                                     + current_chain
-                                                                     # PRS if protease release is toggled.
-                                                                     + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if state.release_protease_toggle else ""]
-                                                                     + ["GGGSGGGS" if state.release_protease_toggle else ""]
-                                                                     # C-term protease sequence.
-                                                                     + [(CTEV_DATA[state.c_protease_selection][1] if not state.custom_protease_toggle else state.c_protease_sequence_entry, "C-Term Protease", "#3948c6")]
-                                                                     # Linker and PRS/Cargo if release cargo is toggled and cargo is associated.
-                                                                     + ["GGGSGGGS" if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
-                                                                     + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
-                                                                     + ["GGGSGGGS" if chain_id in state.cargo_chain_association else ""]
-                                                                     + [(state.cargo_sequence, "Cargo", "#bd4258") if chain_id in state.cargo_chain_association else ""]
-                                                                     + ["*" if not chain_id in state.aip_chain_association else ""] # Stop codon if no AIP
-                                                                     )
+                        # Append AIP if associated with this chain.
+                        if chain_id in state.aip_chain_association:
+                            construct_list[f"{chain_id}_N-Term Protease"].append("GGGSGGGS")
+                            construct_list[f"{chain_id}_N-Term Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
+                            construct_list[f"{chain_id}_N-Term Protease"].append("*")
 
-                    # Append AIP if associated with this chain.
-                    if chain_id in state.aip_chain_association:
-                        construct_list[f"{chain_id}_C-Term Protease"].append("GGGSGGGS")
-                        construct_list[f"{chain_id}_C-Term Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence,"AIP", "#5aa56b"))
-                        construct_list[f"{chain_id}_C-Term Protease"].append("*")
+                    elif chain_id in state.protease_chain_association["c"]:
+                        # Construct C-term protease chain.
+                        construct_list[f"{chain_id}_C-Term Protease"] = ([f"> {chain_id}_C-Term Protease{'_CARGO' if chain_id in state.cargo_chain_association else ''}\n\n"]
+                                                                         + current_chain
+                                                                         # PRS if protease release is toggled.
+                                                                         + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if state.release_protease_toggle else ""]
+                                                                         + ["GGGSGGGS" if state.release_protease_toggle else ""]
+                                                                         # C-term protease sequence.
+                                                                         + [(CTEV_DATA[state.c_protease_selection][1] if not state.custom_protease_toggle else state.c_protease_sequence_entry, "C-Term Protease", "#3948c6")]
+                                                                         # Linker and PRS/Cargo if release cargo is toggled and cargo is associated.
+                                                                         + ["GGGSGGGS" if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
+                                                                         + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b") if chain_id in state.cargo_chain_association and state.release_cargo_toggle else ""]
+                                                                         + ["GGGSGGGS" if chain_id in state.cargo_chain_association else ""]
+                                                                         + [(state.cargo_sequence, "Cargo", "#bd4258") if chain_id in state.cargo_chain_association else ""]
+                                                                         + ["*" if not chain_id in state.aip_chain_association else ""] # Stop codon if no AIP
+                                                                         )
 
-            else: # Logic for complete protease design.
-                if chain_id in state.protease_chain_association["complete"]:
-                    # Construct complete protease chain.
-                    construct_list[f"{chain_id}_Protease"] = ([f"> {chain_id}_Protease\n\n"]
-                                                              + current_chain
-                                                              # Complete protease sequence.
-                                                              + [(TEVP_DATA[state.complete_protease_selection][1] if not state.custom_protease_toggle else state.custom_protease_sequence, "Protease", "#6b46b9")]
-                                                              + ["*" if not chain_id in state.aip_chain_association else ""] # Stop codon if no AIP
-                                                              )
+                        # Append AIP if associated with this chain.
+                        if chain_id in state.aip_chain_association:
+                            construct_list[f"{chain_id}_C-Term Protease"].append("GGGSGGGS")
+                            construct_list[f"{chain_id}_C-Term Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence,"AIP", "#5aa56b"))
+                            construct_list[f"{chain_id}_C-Term Protease"].append("*")
 
-                    # Append AIP if associated with this chain.
-                    if chain_id in state.aip_chain_association:
-                        construct_list[f"{chain_id}_Protease"].append("GGGSGGGS")
-                        construct_list[f"{chain_id}_Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
-                        construct_list[f"{chain_id}_Protease"].append("*")
+                else: # Logic for complete protease design.
+                    if chain_id in state.protease_chain_association["complete"]:
+                        # Construct complete protease chain.
+                        construct_list[f"{chain_id}_Protease"] = ([f"> {chain_id}_Protease\n\n"]
+                                                                  + current_chain
+                                                                  # Complete protease sequence.
+                                                                  + [(TEVP_DATA[state.complete_protease_selection][1] if not state.custom_protease_toggle else state.custom_protease_sequence, "Protease", "#6b46b9")]
+                                                                  + ["*" if not chain_id in state.aip_chain_association else ""] # Stop codon if no AIP
+                                                                  )
 
-                elif chain_id in state.cargo_chain_association:
-                    # Construct cargo-only chain (when protease is on another chain).
-                    construct_list[f"{chain_id}_Cargo"] = ([f"> {chain_id}_Cargo\n\n"]
-                                                           + current_chain
-                                                           # PRS, linker, and cargo sequences.
-                                                           + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b"), "GGGSGGGS", (state.cargo_sequence, "Cargo", "#bd4258")]
-                                                           + ["*" if not chain_id in state.aip_chain_association else ""] # Stop codon if no AIP
-                                                           )
+                        # Append AIP if associated with this chain.
+                        if chain_id in state.aip_chain_association:
+                            construct_list[f"{chain_id}_Protease"].append("GGGSGGGS")
+                            construct_list[f"{chain_id}_Protease"].append((AIP_DATA[state.aip_selection][1] if not state.custom_aip_toggle else state.custom_aip_sequence, "AIP", "#5aa56b"))
+                            construct_list[f"{chain_id}_Protease"].append("*")
+
+                    elif chain_id in state.cargo_chain_association:
+                        # Construct cargo-only chain (when protease is on another chain).
+                        construct_list[f"{chain_id}_Cargo"] = ([f"> {chain_id}_Cargo\n\n"]
+                                                               + current_chain
+                                                               # PRS, linker, and cargo sequences.
+                                                               + [(PRS_DATA[state.prs_selection][1] if not state.custom_prs_toggle else state.custom_prs_sequence, "PRS", "#b4774b"), "GGGSGGGS", (state.cargo_sequence, "Cargo", "#bd4258")]
+                                                               + ["*" if not chain_id in state.aip_chain_association else ""] # Stop codon if no AIP
+                                                               )
 
             # Create FRET sequences if enabled.
             if state.fret_chains_toggle:
