@@ -875,7 +875,8 @@ anchor_ids, anchor_icons = update_scroll_navigation(transmembrane_design=(("tran
                                                     split_design=(("split_protease_toggle" in state and state.split_protease_toggle) or "split_protease_toggle" not in state),
                                                     protease_release_design=("release_protease_toggle" in state and state.release_protease_toggle),
                                                     cargo_release_design=(("release_cargo_toggle" in state and state.release_cargo_toggle) or "release_cargo_toggle" not in state),
-                                                    valine_design=("A_tmd_selection" in state and state.A_tmd_selection == "Valine"))
+                                                    valine_design=("A_tmd_selection" in state and state.A_tmd_selection == "Valine"),
+                                                    custom_icd=state.custom_icd_toggle if "custom_icd_toggle" in state else False)
 
 # TODO: create all possible mesa icd svgs
 
