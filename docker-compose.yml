@@ -8,8 +8,8 @@ services:
     image: mesa-designer
     container_name: mesa-designer
     restart: unless-stopped
-    cpus: "1.0"
-    mem_limit: "2g"
+    cpus: "3.0"
+    mem_limit: "6g"
     logging:
       driver: "json-file"
       options:
@@ -23,11 +23,26 @@ services:
       - traefik-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.mesa-designer.rule=Host(`mesa.igem-munich.com`)"
-      - "traefik.http.routers.mesa-designer.entrypoints=https"
-      - "traefik.http.routers.mesa-designer.tls=true"
-      - "traefik.http.routers.mesa-designer.tls.certresolver=cloudflare"
-      - "traefik.http.services.mesa-designer.loadbalancer.server.port=8501"
+      
+      # Router for Streamlit (mesa.igem-munich.com -> port 8501)
+      - "traefik.http.routers.mesa-streamlit.rule=Host(`mesa.igem-munich.com`)"
+      - "traefik.http.routers.mesa-streamlit.entrypoints=https"
+      - "traefik.http.routers.mesa-streamlit.tls=true"
+      - "traefik.http.routers.mesa-streamlit.tls.certresolver=cloudflare"
+      - "traefik.http.routers.mesa-streamlit.service=mesa-streamlit-service"
+      
+      # Service for Streamlit
+      - "traefik.http.services.mesa-streamlit-service.loadbalancer.server.port=8501"
+      
+      # Router for FastAPI (mesa-api.igem-munich.com -> port 8000)
+      - "traefik.http.routers.mesa-api.rule=Host(`mesa-api.igem-munich.com`)"
+      - "traefik.http.routers.mesa-api.entrypoints=https"
+      - "traefik.http.routers.mesa-api.tls=true"
+      - "traefik.http.routers.mesa-api.tls.certresolver=cloudflare"
+      - "traefik.http.routers.mesa-api.service=mesa-api-service"
+      
+      # Service for FastAPI
+      - "traefik.http.services.mesa-api-service.loadbalancer.server.port=8000"
 
 networks:
   mesa-designer-network:
