@@ -892,6 +892,7 @@ with st.sidebar:
 col1, col2 = st.columns([1, 0.1], vertical_alignment="bottom")
 with col1:
     st.title("MESA-Design Tool")
+    st.info("Check out our [MESA Designer API](https://mesa-api.igem-munich.com)")
 
 # Determine the icon for the theme change button based on the current theme.
 btn_icon: str = state.themes["light"]["button_icon"] if state.themes["current_theme"] == "light" else state.themes["dark"]["button_icon"]
